@@ -2,9 +2,11 @@
 # define IRC_HPP
 
 # include <iostream>
+#include <algorithm>
 # include <map>
 # include <cstdio>
-#include <exception>
+# include <vector>
+# include <exception>
 # include <sys/socket.h>
 # include <cerrno>
 # include <netinet/in.h>
@@ -14,12 +16,12 @@
 # include <sys/epoll.h>
 # include <cstdlib>
 # include <fcntl.h>
-# include "utils.hpp"
-# include "channel.hpp"
-# include "client.hpp"
-# include "logger.hpp"
-# include "server.hpp"
-# include "command.hpp"
+# include "./utils.hpp"
+# include "./channel.hpp"
+# include "./client.hpp"
+# include "./logger.hpp"
+# include "./server.hpp"
+# include "./command.hpp"
 
 using namespace std;
 

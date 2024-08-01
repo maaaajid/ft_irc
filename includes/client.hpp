@@ -3,10 +3,11 @@
 
 # include "irc.hpp"
 
+using namespace std;
 class client
 {
     private :
-        int     c_fd; //client socket
+        int     c_fd;//client socket
         string  nickname;
         string  username;
         string  c_ip;

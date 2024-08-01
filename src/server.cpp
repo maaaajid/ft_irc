@@ -1,7 +1,9 @@
 #include "../includes/server.hpp"
+#include <netinet/in.h>
 #include <stdexcept>
 #include <sys/epoll.h>
 #include <sys/socket.h>
+#include <vector>
 
 Server::Server(Parse par)
 {
@@ -68,7 +70,7 @@ void    Server::createNewConnection()
 {
     int fd;
     socklen_t socklen;
-    sockaddr addr;
+    sockaddr_in addr;
     epoll_event newClient;
 
 
@@ -86,7 +88,9 @@ void    Server::createNewConnection()
     newClient.events = EPOLLIN | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDHUP;
     if (epoll_ctl(this->epollFd, EPOLL_CTL_ADD, fd, &newClient) < 0)
         perror("epoll_ctl() error"), throw runtime_error("error epoll_ctl()");
-    clients[fd] = clientData;
+    clientData.setC_fd(fd);
+    clientData.setC_ip(inet_ntoa(addr.sin_addr));
+    usersList.push_back(clientData);
 }
 
 void    Server::startCommunication()
@@ -108,7 +112,7 @@ void    Server::startCommunication()
         x = -1;
         while (++x < epollCounter)
         {
-            // if the event happen in the socket file discreptor that's mean is a new client;
+            // if the event happen in the server socket file discreptor that's mean is a new client;
             // so we need to add this client;
             if (events[x].data.fd == this->socketfd)
                 this->createNewConnection();
@@ -120,9 +124,10 @@ void    Server::startCommunication()
             {
                 if (epoll_ctl(this->epollFd, EPOLL_CTL_DEL, events[x].data.fd, events) > 0)
                     perror("epoll_ctl() error"), throw runtime_error("error epoll_ctl()");
+                this->removeUser(events[x].data.fd);
                 close(events[x].data.fd);
-                this->clients[events[x].data.fd];
                 cout << events[x].data.fd << " deleted" << endl;
+                continue;
             }
 
 
@@ -146,5 +151,22 @@ void    Server::startCommunication()
                 // this->clients.erase(events[x].data.fd);
             //}
         }
+    }
+}
+
+
+
+// we need to test it more
+void    Server::removeUser(int fd)
+{
+    vector<client>::iterator it = usersList.begin();
+    while (it != this->usersList.end())
+    {
+        if (it->getC_fd() == fd)
+        {
+            usersList.erase(it);
+            break;
+        }
+        it++;
     }
 }

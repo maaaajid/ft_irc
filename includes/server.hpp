@@ -11,13 +11,14 @@ class Server
         string          ServerIP;
         int             socketfd;
         int             epollFd;
-        map<int, client> clients;
+        vector<client>  usersList;
     
     public :
         Server(Parse par);
         void    serverSockCreate();
         void    startCommunication();
         void    createNewConnection();
+        void    removeUser(int fd);
         ~Server();
 };
 
