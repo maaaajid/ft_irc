@@ -121,11 +121,7 @@ void    Server::startCommunication()
             // if the events had one or more of these macros that's mean somthing wrong hapent;
             // and we need to delete this client;
             if (events[x].events & EPOLLERR || events[x].events & EPOLLHUP || events[x].events & EPOLLRDHUP)
-            {
-                this->removeUser(events[x].data.fd, events);
-                cout << events[x].data.fd << " deleted" << endl;
-                continue;
-            }
+                this->removeUser(events[x++].data.fd, events);
 
 
             // here if event had EPOLLIN that's mean there is some thin you need to read;
@@ -165,6 +161,7 @@ void    Server::removeUser(int fd, epoll_event *events)
             close(fd);
             if (epoll_ctl(this->epollFd, EPOLL_CTL_DEL, fd, events) > 0)
                 perror("epoll_ctl() error"), throw runtime_error("error epoll_ctl()");
+            cout << fd << " deleted" << endl;
             break;
         }
         it++;
