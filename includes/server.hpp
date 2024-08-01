@@ -18,7 +18,7 @@ class Server
         void    serverSockCreate();
         void    startCommunication();
         void    createNewConnection();
-        void    removeUser(int fd);
+        void    removeUser(int fd, epoll_event *events);
         ~Server();
 };
 

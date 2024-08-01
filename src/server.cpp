@@ -122,10 +122,7 @@ void    Server::startCommunication()
             // and we need to delete this client;
             if (events[x].events & EPOLLERR || events[x].events & EPOLLHUP || events[x].events & EPOLLRDHUP)
             {
-                if (epoll_ctl(this->epollFd, EPOLL_CTL_DEL, events[x].data.fd, events) > 0)
-                    perror("epoll_ctl() error"), throw runtime_error("error epoll_ctl()");
-                this->removeUser(events[x].data.fd);
-                close(events[x].data.fd);
+                this->removeUser(events[x].data.fd, events);
                 cout << events[x].data.fd << " deleted" << endl;
                 continue;
             }
@@ -157,7 +154,7 @@ void    Server::startCommunication()
 
 
 // we need to test it more
-void    Server::removeUser(int fd)
+void    Server::removeUser(int fd, epoll_event *events)
 {
     vector<client>::iterator it = usersList.begin();
     while (it != this->usersList.end())
@@ -165,6 +162,9 @@ void    Server::removeUser(int fd)
         if (it->getC_fd() == fd)
         {
             usersList.erase(it);
+            close(fd);
+            if (epoll_ctl(this->epollFd, EPOLL_CTL_DEL, fd, events) > 0)
+                perror("epoll_ctl() error"), throw runtime_error("error epoll_ctl()");
             break;
         }
         it++;
