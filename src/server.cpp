@@ -79,7 +79,8 @@ void    Server::createNewConnection()
     socklen = sizeof(addr);
     if ((fd = accept(this->socketfd, &(sockaddr &)addr, &socklen)) < 0)
         perror("accept() error"), throw runtime_error("error accept()");
-
+    // if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
+    //     perror("fcntl() error"), throw runtime_error("error fcntl()");
 
     // we add the new client to epoll instece to check it if it has any event;
     client clientData;
@@ -121,7 +122,10 @@ void    Server::startCommunication()
             // if the events had one or more of these macros that's mean somthing wrong hapent;
             // and we need to delete this client;
             if (events[x].events & EPOLLERR || events[x].events & EPOLLHUP || events[x].events & EPOLLRDHUP)
-                this->removeUser(events[x++].data.fd, events);
+            {
+                this->removeUser(events[x].data.fd, events);
+                continue;
+            }
 
 
             // here if event had EPOLLIN that's mean there is some thin you need to read;
@@ -131,19 +135,8 @@ void    Server::startCommunication()
                 memset(buffer, 0, 1024);
                 recv(events[x].data.fd, buffer, 1024, 0);
                 cout << "in fd: "<< events[x].data.fd << " " << buffer;
-                requestHandler(usersList, events[x].data.fd);
+                //requestHandler(usersList, events[x].data.fd);
             }
-            //NOT FINNISHED WORK;
-            // if (events[x].events & EPOLLOUT && events[x].data.fd != socketfd)
-            // {
-            //     cin >> str;
-            //     send(events[x].data.fd, str.c_str(), str.size(), 0);
-            //     this->flag = false;
-                // if (epoll_ctl(this->epollFd, EPOLL_CTL_DEL, events[x].data.fd, events) > 0)
-                //     perror("epoll_ctl() error"), throw exception();
-                // close(events[x].data.fd);
-                // this->clients.erase(events[x].data.fd);
-            //}
         }
     }
 }
