@@ -106,6 +106,7 @@ void    Server::startCommunication()
     char            buffer[1024];
     epoll_event     events[1024];
     signal(SIGINT, signal_handler);
+    signal(SIGQUIT, signal_handler);
     while (!this->Signal)
     {
         // cout << getSignal() << endl;
@@ -139,6 +140,9 @@ void    Server::startCommunication()
             if (events[x].events & EPOLLIN && events[x].data.fd != socketfd)
             {
                 // here you reseve the msg;
+                memset(buffer, 0, 1024);
+                recv(events[x].data.fd, buffer, 1024, 0);
+                cout << "in fd: "<< events[x].data.fd << " " << buffer;
                 //requestHandler(usersList, events[x].data.fd);
             }
         }
