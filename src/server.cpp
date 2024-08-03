@@ -105,8 +105,8 @@ void    Server::startCommunication()
     int             x = 0;
     char            buffer[1024];
     epoll_event     events[1024];
-    signal(SIGINT, signal_handler);
-    signal(SIGQUIT, signal_handler);
+    signal(SIGINT, Server::signal_handler);
+    signal(SIGQUIT, Server::signal_handler);
     while (!this->Signal)
     {
         // cout << getSignal() << endl;
@@ -179,10 +179,12 @@ void    Server::closeAllFds()
         close(it->getC_fd());
         it++;
     }
+    close(this->socketfd);
+    close(this->epollFd);
     
 }
 
-void    signal_handler(int)
+void    Server::signal_handler(int)
 {
     Server::setSignal(true);
 }

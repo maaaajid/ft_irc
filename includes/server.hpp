@@ -24,10 +24,10 @@ class Server
         void    closeAllFds( void );
         bool    getSignal( void ){return (Signal);};
         static void    setSignal(bool s){Signal = s;};
+        static void    signal_handler(int);
        ~Server();
 };
 
-void    signal_handler(int);
 
 
 #endif
