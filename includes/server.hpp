@@ -4,6 +4,9 @@
 #include "client.hpp"
 # include "irc.hpp"
 
+using namespace std;
+class Client;
+
 class Server
 {
     private :
@@ -13,7 +16,7 @@ class Server
         string          ServerIP;
         int             socketfd;
         int             epollFd;
-        vector<client>  usersList;
+        vector<Client>  usersList;
     
     public :
         Server(Parse par);
