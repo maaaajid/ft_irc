@@ -7,7 +7,7 @@ Parse    parse(char **av)
     while (av[2][++x])
     {
         if (!isalnum(av[2][x]))
-            cout << "Somthing wrong whit the password" << endl, exit (1);
+            cout << "Something wrong with the password" << endl, exit (1);
         parse.password = av[2];
     }
     x = -1;
