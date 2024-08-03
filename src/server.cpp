@@ -1,4 +1,5 @@
 #include "../includes/server.hpp"
+#include "../includes/client.hpp"
 #include <netinet/in.h>
 #include <stdexcept>
 #include <sys/epoll.h>
@@ -83,7 +84,7 @@ void    Server::createNewConnection()
     //     perror("fcntl() error"), throw runtime_error("error fcntl()");
 
     // we add the new client to epoll instece to check it if it has any event;
-    client clientData;
+    Client clientData;
     memset(&newClient, 0, sizeof(newClient));
     newClient.data.fd = fd;
     newClient.events = EPOLLIN | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDHUP;
@@ -146,7 +147,7 @@ void    Server::startCommunication()
 // we need to test it more
 void    Server::removeUser(int fd, epoll_event *events)
 {
-    vector<client>::iterator it = usersList.begin();
+    vector<Client>::iterator it = usersList.begin();
     while (it != this->usersList.end())
     {
         if (it->getC_fd() == fd)
