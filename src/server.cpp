@@ -1,9 +1,12 @@
 #include "../includes/server.hpp"
+#include <csignal>
 #include <netinet/in.h>
 #include <stdexcept>
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <vector>
+
+bool Server::Signal = false;
 
 Server::Server(Parse par)
 {
@@ -11,7 +14,6 @@ Server::Server(Parse par)
     this->ServerIP = "127.0.0.1";
     this->ServerPort = par.port;
     this->ServerPassword = par.password;
-
     //creating an epoll instence in the kernel that will track all fds that we'll create later;
     if ((this->epollFd = epoll_create(1)) < 0)
         throw runtime_error("Erorr: epoll_create()");
@@ -21,6 +23,9 @@ Server::Server(Parse par)
 
     // after we created a server socket, now we will start;
     this->startCommunication();
+
+    // this function it'll be called in case of singnels, it will close all fds; 
+    this->closeAllFds();
 }
 
 Server::~Server(){}
@@ -100,9 +105,10 @@ void    Server::startCommunication()
     int             x = 0;
     char            buffer[1024];
     epoll_event     events[1024];
-
-    while (1337)
+    signal(SIGINT, signal_handler);
+    while (!this->Signal)
     {
+        // cout << getSignal() << endl;
         //epoll_wait() is the function that will tell as how many event hapening; 
         epollCounter = epoll_wait(this->epollFd, events, 1024, -1);
         if (epollCounter < 0)
@@ -113,6 +119,7 @@ void    Server::startCommunication()
         x = -1;
         while (++x < epollCounter)
         {
+            
             // if the event happen in the server socket file discreptor that's mean is a new client;
             // so we need to add this client;
             if (events[x].data.fd == this->socketfd)
@@ -157,4 +164,21 @@ void    Server::removeUser(int fd, epoll_event *events)
         }
         it++;
     }
+}
+
+void    Server::closeAllFds()
+{
+    vector<client>::iterator it = usersList.begin();
+    while (it != usersList.end())
+    {
+        cout << "closing fd: " << it->getC_fd() << endl;
+        close(it->getC_fd());
+        it++;
+    }
+    
+}
+
+void    signal_handler(int)
+{
+    Server::setSignal(true);
 }

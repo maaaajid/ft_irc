@@ -6,6 +6,7 @@
 # include <map>
 # include <cstdio>
 # include <vector>
+#include <csignal>
 # include <exception>
 # include <sys/socket.h>
 # include <cerrno>

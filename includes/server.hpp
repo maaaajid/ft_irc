@@ -1,11 +1,13 @@
 #ifndef SERVER_HPP
 # define SERVER_HPP
 
+#include "client.hpp"
 # include "irc.hpp"
 
 class Server
 {
     private :
+        static bool     Signal;
         int             ServerPort;
         string          ServerPassword;
         string          ServerIP;
@@ -19,7 +21,13 @@ class Server
         void    startCommunication();
         void    createNewConnection();
         void    removeUser(int fd, epoll_event *events);
-        ~Server();
+        void    closeAllFds( void );
+        bool    getSignal( void ){return (Signal);};
+        static void    setSignal(bool s){Signal = s;};
+       ~Server();
 };
+
+void    signal_handler(int);
+
 
 #endif
