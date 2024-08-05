@@ -4,7 +4,7 @@ int main(int ac, char **av)
 {
     if (ac != 3)
     {
-        cerr << "Usage : ./Irc <port> <password>" << endl;
+        cerr << "Usage : ./ircserv <port> <password>" << endl;
         return (1);
     }
     else
@@ -15,7 +15,7 @@ int main(int ac, char **av)
         }
         catch(const std::exception& e)
         {
-            std::cerr << e.what();
+            std::cerr << e.what() << std::endl;
         }
     }
 }

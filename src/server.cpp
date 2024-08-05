@@ -177,7 +177,7 @@ void    Server::removeUser(int fd, epoll_event *events)
 
 void    Server::closeAllFds()
 {
-    vector<client>::iterator it = usersList.begin();
+    vector<Client>::iterator it = usersList.begin();
     while (it != usersList.end())
     {
         cout << "closing fd: " << it->getC_fd() << endl;
