@@ -17,6 +17,7 @@ class Server
         int             socketfd;
         int             epollFd;
         vector<Client>  usersList;
+        Logger          logger;
     
     public :
         Server(Parse par);

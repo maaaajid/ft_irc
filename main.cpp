@@ -2,6 +2,8 @@
 
 int main(int ac, char **av)
 {
+    Logger debug;
+
     if (ac != 3)
     {
         cerr << "Usage : ./ircserv <port> <password>" << endl;
@@ -15,7 +17,11 @@ int main(int ac, char **av)
         }
         catch(const std::exception& e)
         {
+<<<<<<< HEAD
             std::cerr << e.what() << std::endl;
+=======
+            // debug.logDebug(e.what());
+>>>>>>> brahim
         }
     }
 }
