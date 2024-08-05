@@ -61,6 +61,9 @@ void    Server::serverSockCreate()
         logger.logError("Error setting socket option: " + string(strerror(errno))), throw runtime_error("Error setting socket option");
 
 
+    if (fcntl(this->socketfd, F_SETFL, O_NONBLOCK) < 0)
+        perror("fcntl() error"), throw runtime_error("error fcntl()");
+
     // fill struct sockaddr_in whit socket ip and port we will use it after;
     sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
@@ -101,8 +104,10 @@ void    Server::createNewConnection()
     socklen = sizeof(addr);
     if ((fd = accept(this->socketfd, &(sockaddr &)addr, &socklen)) < 0)
         logger.logError("Error accepting new connection: " + string(strerror(errno))), throw runtime_error("Error accepting new connection");
-    // if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
-    //     perror("fcntl() error"), throw runtime_error("error fcntl()");
+
+    
+    if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
+        perror("fcntl() error"), throw runtime_error("error fcntl()");
 
     // we add the new client to epoll instece to check it if it has any event;
     Client clientData;
