@@ -2,6 +2,8 @@
 
 int main(int ac, char **av)
 {
+    Logger debug;
+
     if (ac != 3)
     {
         cerr << "Usage : ./Irc <port> <password>" << endl;
@@ -15,7 +17,7 @@ int main(int ac, char **av)
         }
         catch(const std::exception& e)
         {
-            std::cerr << e.what();
+            // debug.logDebug(e.what());
         }
     }
 }

@@ -1,10 +1,12 @@
-#include "../includes/server.hpp"
-#include "../includes/client.hpp"
-#include <netinet/in.h>
-#include <stdexcept>
-#include <sys/epoll.h>
-#include <sys/socket.h>
-#include <vector>
+// #include "../includes/server.hpp"
+// #include "../includes/logger.hpp"
+// // #include "../includes/client.hpp"
+// #include <netinet/in.h>
+// #include <stdexcept>
+// #include <sys/epoll.h>
+// #include <sys/socket.h>
+// #include <vector>
+#include "../includes/irc.hpp"
 
 Server::Server(Parse par)
 {
@@ -15,8 +17,8 @@ Server::Server(Parse par)
 
     //creating an epoll instence in the kernel that will track all fds that we'll create later;
     if ((this->epollFd = epoll_create(1)) < 0)
-        throw runtime_error("Erorr: epoll_create()");
-
+        logger.logError("Error creating epoll instance: " + string(strerror(errno))), throw runtime_error("Error creating epoll instance");
+    
     // now we'll create a server socket;
     this->serverSockCreate();
 
@@ -30,14 +32,14 @@ void    Server::serverSockCreate()
 {
     // creating a server socket that will tell as if there is any new client;
     if ((this->socketfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-        perror("socket() error"), throw runtime_error("error socket()");
+        logger.logError("Error creating socket: " + string(strerror(errno))), throw runtime_error("Error creating socket");
 
 
     // add an option to make socket able to reuse same address and port,
     // we don't need to wait WAIT_TIME to use same ip and port;
     int optval = 1;
     if (setsockopt(this->socketfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0)
-        perror("setsockopt() error"), throw runtime_error("error setsockopt()");
+        logger.logError("Error setting socket option: " + string(strerror(errno))), throw runtime_error("Error setting socket option");
 
 
     // fill struct sockaddr_in whit socket ip and port we will use it after;
@@ -46,17 +48,17 @@ void    Server::serverSockCreate()
     addr.sin_family = AF_INET;
     addr.sin_port = htons(this->ServerPort);
     if (inet_pton(AF_INET, this->ServerIP.c_str(), &addr.sin_addr.s_addr) < 0)
-        perror("inet_pton() error"), throw runtime_error("error inet_pton()");
+        logger.logError("Error converting IP address: " + string(strerror(errno))), throw runtime_error("Error converting IP address");
 
 
     // here we bind socket file discreptor whit the IP and port we want;
     if (bind(this->socketfd, &(sockaddr &)addr, sizeof(addr)) < 0)
-        perror("bind() error"), throw runtime_error("error bind()");
+        logger.logError("Error binding socket: " + string(strerror(errno))), throw runtime_error("Error binding socket");
 
 
     // here the program will stop until a client reach socket; 
     if (listen(this->socketfd, SOMAXCONN) < 0)
-        perror("listen() error"), throw runtime_error("error listen()");
+        logger.logError("Error listening on socket: " + string(strerror(errno))), throw runtime_error("Error listening on socket");
 
 
     // here we add the server file discreptor to epoll inctense to tell as if there is any new client;
@@ -64,7 +66,7 @@ void    Server::serverSockCreate()
     connection.events = EPOLLIN;
     connection.data.fd = this->socketfd;
     if (epoll_ctl(this->epollFd, EPOLL_CTL_ADD, this->socketfd, &connection) < 0)
-        perror("epoll_ctl() error"), throw runtime_error("error epoll_ctl()");
+        logger.logError("Error adding socket to epoll: " + string(strerror(errno))), throw runtime_error("Error adding socket to epoll");
 }
 
 void    Server::createNewConnection()
@@ -79,7 +81,7 @@ void    Server::createNewConnection()
     memset(&addr, 0, sizeof(addr));
     socklen = sizeof(addr);
     if ((fd = accept(this->socketfd, &(sockaddr &)addr, &socklen)) < 0)
-        perror("accept() error"), throw runtime_error("error accept()");
+        logger.logError("Error accepting new connection: " + string(strerror(errno))), throw runtime_error("Error accepting new connection");
     // if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
     //     perror("fcntl() error"), throw runtime_error("error fcntl()");
 
@@ -89,7 +91,7 @@ void    Server::createNewConnection()
     newClient.data.fd = fd;
     newClient.events = EPOLLIN | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDHUP;
     if (epoll_ctl(this->epollFd, EPOLL_CTL_ADD, fd, &newClient) < 0)
-        perror("epoll_ctl() error"), throw runtime_error("error epoll_ctl()");
+        logger.logError("Error adding new connection: " + string(strerror(errno))), throw runtime_error("Error adding new connection");
     clientData.setC_fd(fd);
     clientData.setC_ip(inet_ntoa(addr.sin_addr));
     usersList.push_back(clientData);
@@ -107,7 +109,7 @@ void    Server::startCommunication()
         //epoll_wait() is the function that will tell as how many event hapening; 
         epollCounter = epoll_wait(this->epollFd, events, 1024, -1);
         if (epollCounter < 0)
-            perror("epoll_wait() error"), throw runtime_error("error epoll_wait()");
+                logger.logError("Error waiting for events: " + string(strerror(errno))), throw runtime_error("Error waiting for events");
 
         
         //so we need to check theme all one by one;
@@ -135,7 +137,9 @@ void    Server::startCommunication()
                 // here you reseve the msg;
                 memset(buffer, 0, 1024);
                 recv(events[x].data.fd, buffer, 1024, 0);
-                cout << "in fd: "<< events[x].data.fd << " " << buffer;
+                std::stringstream ss;
+                ss << "in fd: " << events[x].data.fd << " " << buffer;
+                logger.logInfo(ss.str());
                 //requestHandler(usersList, events[x].data.fd);
             }
         }
@@ -155,7 +159,7 @@ void    Server::removeUser(int fd, epoll_event *events)
             usersList.erase(it);
             close(fd);
             if (epoll_ctl(this->epollFd, EPOLL_CTL_DEL, fd, events) > 0)
-                perror("epoll_ctl() error"), throw runtime_error("error epoll_ctl()");
+                logger.logError("Error removing socket from epoll: " + string(strerror(errno))), throw runtime_error("Error removing socket from epoll");
             cout << fd << " deleted" << endl;
             break;
         }

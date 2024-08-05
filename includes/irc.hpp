@@ -2,7 +2,10 @@
 # define IRC_HPP
 
 # include <iostream>
-#include <algorithm>
+# include <algorithm>
+# include <ctime>
+# include <iomanip>
+# include <sstream>
 # include <map>
 # include <cstdio>
 # include <vector>
