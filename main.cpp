@@ -17,11 +17,7 @@ int main(int ac, char **av)
         }
         catch(const std::exception& e)
         {
-<<<<<<< HEAD
-            std::cerr << e.what() << std::endl;
-=======
             // debug.logDebug(e.what());
->>>>>>> brahim
         }
     }
 }
