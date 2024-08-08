@@ -53,3 +53,13 @@ string  Client::getC_state(void)
 {
     return (this->c_state);
 }
+
+void    Client::setAuth(bool auth)
+{
+    this->auth = auth;
+}
+
+bool    Client::getAuth(void)
+{
+    return (this->auth);
+}
