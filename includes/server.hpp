@@ -29,6 +29,11 @@ class Server
         bool    getSignal( void ){return (Signal);};
         static void    setSignal(bool s){Signal = s;};
         static void    signal_handler(int);
+
+        void    SendMsg(int socketFd, std::string msg);
+        std::string RecvMsg(int socketFd);
+        Client    UserAuth(int userFd);
+        void NumericReplies(Client client, bool flag);
        ~Server();
 };
 

@@ -24,7 +24,7 @@ void    Client::setC_ip(string c_Ip)
     this->c_ip = c_Ip;
 }
 
-void    Client::setC_state(string c_State)
+void    Client::setC_state(int c_State)
 {
     this->c_state = c_State;
 }
@@ -49,7 +49,17 @@ string  Client::getC_ip(void)
     return (this->c_ip);
 }
 
-string  Client::getC_state(void)
+int  Client::getC_state(void)
 {
     return (this->c_state);
+}
+
+void    Client::setAuth(bool auth)
+{
+    this->auth = auth;
+}
+
+bool    Client::getAuth(void)
+{
+    return (this->auth);
 }

@@ -3,15 +3,23 @@
 
 # include "irc.hpp"
 
+#define MAX_READ_ONCE 1024
+
+//client states
+# define WAITING_AUTH 0
+# define AUTHENTICATED 1
+
 using namespace std;
 class Client
 {
     private :
         int     c_fd;//client socket
+        bool    auth;
+		bool	passValid;
         string  nickname;
         string  username;
         string  c_ip;
-        string  c_state; // client connection state
+        int     c_state; // client connection state
 
     public :
         Client();
@@ -20,12 +28,25 @@ class Client
         void            setNickname(string nickName);
         void            setUsername(string userName);
         void            setC_ip(string c_Ip);
-        void            setC_state(string c_State);
+        void            setC_state(int c_State);
+        void	setAuth(bool auth);
         int             getC_fd(void);
         string     getnickName(void);
         string     getuserName(void);
         string     getC_ip(void);
-        string     getC_state(void);
+        int        getC_state(void);
+		bool	getAuth(void);
+
+
+		bool getPassValid(void)
+		{
+			return (this->passValid);
+		}
+		void	setPassValid(bool valid)
+		{
+			this->passValid = valid;
+            this->c_state = AUTHENTICATED;
+		}
 
 };
 

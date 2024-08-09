@@ -56,22 +56,22 @@ void    Server::createNewConnection()
         logger.logError("Error accepting new connection: " + string(strerror(errno))), throw runtime_error("Error accepting new connection");
     if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
         perror("fcntl() error"), throw runtime_error("error fcntl()");
-    Client clientData;
+    // Client clientData;
     memset(&newClient, 0, sizeof(newClient));
     newClient.data.fd = fd;
     newClient.events = EPOLLIN | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDHUP;
     if (epoll_ctl(this->epollFd, EPOLL_CTL_ADD, fd, &newClient) < 0)
         logger.logError("Error adding new connection: " + string(strerror(errno))), throw runtime_error("Error adding new connection");
-    clientData.setC_fd(fd);
-    clientData.setC_ip(inet_ntoa(addr.sin_addr));
-    usersList.push_back(clientData);
+    // clientData.setC_fd(fd);
+    // clientData.setC_ip(inet_ntoa(addr.sin_addr));
+    // usersList.push_back(clientData);
 }
 
 void    Server::startCommunication()
 {
     int             epollCounter;
     int             x = 0;
-    char            buffer[1024];
+    // char            buffer[1024];
     epoll_event     events[1024];
     signal(SIGINT, Server::signal_handler);
     signal(SIGQUIT, Server::signal_handler);
@@ -93,12 +93,18 @@ void    Server::startCommunication()
             }
             if (events[x].events & EPOLLIN && events[x].data.fd != socketfd)
             {
-                memset(buffer, 0, 1024);
-                recv(events[x].data.fd, buffer, 1024, 0);
-                std::stringstream ss;
-                ss << "in fd: " << events[x].data.fd << " " << buffer;
-                logger.logInfo(ss.str());
-                //requestHandler(usersList, events[x].data.fd);
+               Client cc =  UserAuth(events[x].data.fd);
+               cout << "auth: " << cc.getAuth() << endl;
+               cout << "fd: " << cc.getC_fd() << endl;
+               cout << "nick: " << cc.getnickName() << endl;
+               cout << "username: " << cc.getuserName() << endl;
+               if (cc.getAuth())
+               {
+                    NumericReplies(cc, true);
+                    usersList.push_back(cc);
+               }
+               else
+                NumericReplies(cc, false); 
             }
         }
     }
@@ -138,4 +144,84 @@ void    Server::closeAllFds()
 void    Server::signal_handler(int)
 {
     Server::setSignal(true);
+}
+
+//mbouayou:
+
+Client    Server::UserAuth(int userFd)
+{
+    std::string msg = RecvMsg(userFd);
+    cout << msg << endl;
+    sleep(4);
+    std::stringstream spliter(msg);
+    std::string word;
+    bool checkPass, checkNick, checkUserName;
+    checkPass = checkNick = checkUserName = false;
+
+    Client newClient;
+    newClient.setC_fd(userFd);
+    while (spliter >> word)
+    {
+        if (word == "PASS")
+        {
+            spliter >> word;
+            cout << "pass server: "  << this->ServerPassword << endl;
+            cout << "pass client: "  << word << endl;
+            if (word == this->ServerPassword)
+            {
+                checkPass = true;
+                newClient.setPassValid(true);
+            }
+        }
+        if (word == "NICK")
+        {
+            spliter >> word;
+            checkNick = true;
+            newClient.setNickname(word);
+        }
+        if (word == "USER")
+        {
+            spliter >> word;
+            checkUserName = true;
+            newClient.setUsername(word);
+        }
+    }
+    if (checkPass && checkNick && checkUserName)
+        newClient.setAuth(true);
+    return (newClient);
+}
+
+
+
+std::string Server::RecvMsg(int socketFd)
+{
+    char buffer[MAX_READ_ONCE];
+    int recvNum;
+
+    recvNum = recv(socketFd, buffer, MAX_READ_ONCE, 0);
+    //check this logger is Warning or Error.
+    if (recvNum == 0)
+        logger.logWarning("closed Connection");
+    return string(buffer, recvNum);
+}
+
+void Server::SendMsg(int socketFd, std::string msg)
+{
+    std::string newMsg = msg + "\r\n";
+    send(socketFd, newMsg.c_str(), newMsg.length(), 0);
+}
+
+void Server::NumericReplies(Client client, bool flag)
+{
+    if (flag)
+    {
+        SendMsg(client.getC_fd(), ":localhost 001 " + client.getnickName() + " :Welcome to the Internet Relay Network " + client.getnickName());
+        SendMsg(client.getC_fd(), ":localhost 002 " + client.getnickName() + " :Your host is localhost, running version 1.0");
+        SendMsg(client.getC_fd(), ":localhost 003 " + client.getnickName()  + " :This server Created by Double-MB");
+        // SendMsg();
+    }
+    else
+    {
+       SendMsg(client.getC_fd(), ":localhost 464 " + client.getnickName() + " :unsscusful auth");
+    }
 }
