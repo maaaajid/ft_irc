@@ -165,7 +165,7 @@ Client    Server::UserAuth(int userFd)
         if (word == "PASS")
         {
             spliter >> word;
-            cout << "pass serever: "  << this->ServerPassword << endl;
+            cout << "pass server: "  << this->ServerPassword << endl;
             cout << "pass client: "  << word << endl;
             if (word == this->ServerPassword)
             {
@@ -222,6 +222,6 @@ void Server::NumericReplies(Client client, bool flag)
     }
     else
     {
-       SendMsg(client.getC_fd(), ":localhost 464 " + client.getnickName() + " :Password incorrect");
+       SendMsg(client.getC_fd(), ":localhost 464 " + client.getnickName() + " :unsscusful auth");
     }
 }
