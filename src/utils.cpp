@@ -1,4 +1,4 @@
-#include "../includes/server.hpp"
+#include "../includes/irc.hpp"
 
 Parse    parse(char **av)
 {
@@ -20,4 +20,11 @@ Parse    parse(char **av)
         cout << "Port number out of range" << endl, exit (1);
     parse.port = atoi(av[1]);
     return (parse);
+}
+
+std::string toString(int value)
+{
+    std::stringstream ss;
+    ss << value;
+    return ss.str();
 }

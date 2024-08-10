@@ -29,7 +29,7 @@ void    Client::setC_state(int c_State)
     this->c_state = c_State;
 }
 
-int Client::getC_fd(void)
+int Client::getC_fd(void) const
 {
     return(this->c_fd);
 }

@@ -11,5 +11,6 @@ struct Parse
 };
 
 Parse    parse(char **av);
+std::string toString(int value);
 
 #endif

@@ -30,7 +30,7 @@ class Client
         void            setC_ip(string c_Ip);
         void            setC_state(int c_State);
         void	setAuth(bool auth);
-        int             getC_fd(void);
+        int             getC_fd(void) const;
         string     getnickName(void);
         string     getuserName(void);
         string     getC_ip(void);

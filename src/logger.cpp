@@ -22,7 +22,7 @@ void    Logger::logInfo(std::string msg)
 
 void    Logger::logDebug(std::string msg)
 {
-    std::cout << MAG << getTime() << CYN << "[DEBUG]" << RST << " " << msg << std::endl;
+    std::cout << MAG << getTime() << GRN << "[DEBUG]" << RST << " " << msg << std::endl;
 }
 
 void    Logger::logError(std::string msg)
