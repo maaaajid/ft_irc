@@ -16,6 +16,7 @@
 # include <netinet/in.h>
 # include <arpa/inet.h> 
 # include <cstring>
+# include <string>
 # include <unistd.h>
 # include <sys/epoll.h>
 # include <cstdlib>
@@ -28,5 +29,7 @@
 # include "./command.hpp"
 
 using namespace std;
+
+extern Logger logger;
 
 #endif

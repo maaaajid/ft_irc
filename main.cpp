@@ -2,8 +2,6 @@
 
 int main(int ac, char **av)
 {
-    Logger debug;
-
     if (ac != 3)
     {
         cerr << "Usage : ./ircserv <port> <password>" << endl;

@@ -34,3 +34,5 @@ void    Logger::logWarning(std::string msg)
 {
     std::cout << MAG << getTime() << YEL << "[WARNING]" << RST << " " << msg << std::endl;
 }
+
+Logger logger;
