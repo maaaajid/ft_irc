@@ -19,10 +19,11 @@
 # include <string>
 # include <unistd.h>
 # include <sys/epoll.h>
+#include <poll.h>
 # include <cstdlib>
 # include <fcntl.h>
 # include "./utils.hpp"
-# include "./channel.hpp"
+// # include "./channel.hpp"
 # include "./client.hpp"
 # include "./logger.hpp"
 # include "./server.hpp"

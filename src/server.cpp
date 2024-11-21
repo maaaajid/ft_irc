@@ -59,15 +59,15 @@ void    Server::createNewConnection()
         logger.logError("Error accepting new connection: " + string(strerror(errno))), throw runtime_error("Error accepting new connection");
     if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
         perror("fcntl() error"), throw runtime_error("error fcntl()");
-    // Client clientData;
+    Client clientData;
     memset(&newClient, 0, sizeof(newClient));
     newClient.data.fd = fd;
     newClient.events = EPOLLIN | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDHUP;
     if (epoll_ctl(this->epollFd, EPOLL_CTL_ADD, fd, &newClient) < 0)
         logger.logError("Error adding new connection: " + string(strerror(errno))), throw runtime_error("Error adding new connection");
-    // clientData.setC_fd(fd);
-    // clientData.setC_ip(inet_ntoa(addr.sin_addr));
-    // usersList.push_back(clientData);
+    clientData.setC_fd(fd);
+    clientData.setC_ip(inet_ntoa(addr.sin_addr));
+    usersList.push_back(clientData);
 }
 
 void    Server::startCommunication()
@@ -87,6 +87,14 @@ void    Server::startCommunication()
         x = -1;
         while (++x < epollCounter)
         {
+            // std::vector<pollfd> fds;
+            // pollfd pfd;
+            // pfd.fd = socketfd;     // File descriptor to monitor
+            // pfd.events = POLLIN;   // Events to watch for
+            // pfd.revents = 0;       // Placeholder for returned events
+
+            // fds.push_back(pfd);    // Add the structure to the vector
+
             if (events[x].data.fd == this->socketfd)
                 this->createNewConnection();
             if (events[x].events & EPOLLERR || events[x].events & EPOLLHUP || events[x].events & EPOLLRDHUP)
@@ -96,31 +104,38 @@ void    Server::startCommunication()
             }
             if (events[x].events & EPOLLIN && events[x].data.fd != socketfd)
             {
-                bool isNewClient = true;
-                for (std::vector<Client>::const_iterator it = this->usersList.begin(); it != this->usersList.end(); ++it)
+
+                for (std::vector<Client>::iterator it = this->usersList.begin(); it != this->usersList.end(); ++it)
                 {
-                    if (it->getC_fd() == events[x].data.fd)
-                    {
-                        isNewClient = false;
-                        break;
-                    }
-                }
+                    std::string buffer = RecvMsg(it->getC_fd());
+                    std::vector<std::string> cmds = Command::getTheCommand(buffer);
+                    //printng the commands
+                    std::cout << "buffer: " << buffer << std::endl;
+                    // for (size_t i= 0; i < cmds.size(); i++)
+                    //     std::cout << "cmds: " << cmds[i] << std::endl;
+                    Command::handleCommand(cmds, *it, *this);
+                    std::cout << "isAuth" << it->getAuth() << std::endl;
                     
-                if (isNewClient)
-                {
-                    Client cc =  UserAuth(events[x].data.fd);
-                    logger.logDebug("auth: " + toString(cc.getAuth()));
-                    logger.logDebug("fd: " + toString(cc.getC_fd()));
-                    logger.logDebug("nick: " + cc.getnickName());
-                    logger.logDebug("username: " + cc.getuserName());
-                    if (cc.getAuth())
-                    {
-                        NumericReplies(cc, true);
-                        usersList.push_back(cc);
-                    }
-                    else
-                        NumericReplies(cc, false);
+                    
+
                 }
+
+                    
+            //     if (isNewClient)
+            //     {
+            //         Client newclient =  UserAuth(events[x].data.fd);
+            //         logger.logDebug("auth: " + toString(newclient.getAuth()));
+            //         logger.logDebug("fd: " + toString(cc.getC_fd()));
+            //         logger.logDebug("nick: " + newclient.getnickName());
+            //         logger.logDebug("username: " + newclient.getuserName());
+            //         if (newclient.getAuth())
+            //         {
+            //             NumericReplies(cc, true);
+            //             usersList.push_back(newclient);
+            //         }
+            //         else
+            //             NumericReplies(newclient, false);
+            //     }
             }
         }
     }
@@ -149,7 +164,7 @@ void    Server::closeAllFds()
     vector<Client>::iterator it = usersList.begin();
     while (it != usersList.end())
     {
-        logger.logWarning("closing fd: " + it->getC_fd());
+        logger.logWarning("closing fd: '" + toString(it->getC_fd()));
         close(it->getC_fd());
         it++;
     }
@@ -164,48 +179,48 @@ void    Server::signal_handler(int)
 
 //mbouayou:
 
-Client    Server::UserAuth(int userFd)
-{
-    std::string msg = RecvMsg(userFd);
-    logger.logDebug(msg);
-    sleep(4);
-    std::stringstream spliter(msg);
-    std::string word;
-    bool checkPass, checkNick, checkUserName;
-    checkPass = checkNick = checkUserName = false;
+// Client    Server::UserAuth(int userFd)
+// {
+//     std::string msg = RecvMsg(userFd);
+//     logger.logDebug(msg);
+//     sleep(4);
+//     std::stringstream spliter(msg);
+//     std::string word;
+//     bool checkPass, checkNick, checkUserName;
+//     checkPass = checkNick = checkUserName = false;
 
-    Client newClient;
-    newClient.setC_fd(userFd);
-    while (spliter >> word)
-    {
-        if (word == "PASS")
-        {
-            spliter >> word;
-            logger.logDebug("pass server: " + this->ServerPassword);
-            logger.logDebug("pass client: " + word);
-            if (word == this->ServerPassword)
-            {
-                checkPass = true;
-                newClient.setPassValid(true);
-            }
-        }
-        if (word == "NICK")
-        {
-            spliter >> word;
-            checkNick = true;
-            newClient.setNickname(word);
-        }
-        if (word == "USER")
-        {
-            spliter >> word;
-            checkUserName = true;
-            newClient.setUsername(word);
-        }
-    }
-    if (checkPass && checkNick && checkUserName)
-        newClient.setAuth(true);
-    return (newClient);
-}
+//     Client client;
+//     client.setC_fd(userFd);
+//     while (spliter >> word)
+//     {
+//     //     if (!client.auth() && word != "PASS" && )
+//     //     {
+//     //         spliter >> word;
+//     //         logger.logDebug("pass server: " + this->ServerPassword);
+//     //         logger.logDebug("pass client: " + word);
+//     //         if (word == this->ServerPassword)
+//     //         {
+//     //             checkPass = true;
+//     //             client.setPassValid(true);
+//     //         }
+//     //     }
+//     //     if (word == "NICK")
+//     //     {
+//     //         spliter >> word;
+//     //         checkNick = true;
+//     //         client.setNickname(word);
+//     //     }
+//     //     if (word == "USER")
+//     //     {
+//     //         spliter >> word;
+//     //         checkUserName = true;
+//     //         client.setUsername(word);
+//     //     }
+//     }
+//     // if (checkPass && checkNick && checkUserName)
+//     //     client.setAuth(true);
+//     return (client);
+// }
 
 
 
@@ -221,25 +236,30 @@ std::string Server::RecvMsg(int socketFd)
     return string(buffer, recvNum);
 }
 
-void Server::SendMsg(int socketFd, std::string msg)
-{
-    std::string newMsg = msg + "\r\n";
-    send(socketFd, newMsg.c_str(), newMsg.length(), 0);
-}
+// void Server::SendMsg(int socketFd, std::string msg)
+// {
+//     std::string newMsg = msg + "\r\n";
+//     send(socketFd, newMsg.c_str(), newMsg.length(), 0);
+// }
 
-void Server::NumericReplies(Client client, bool flag)
-{
-    if (flag)
-    {
-        SendMsg(client.getC_fd(), ":localhost 001 " + client.getnickName() + ": Welcome to the Internet Relay Network " + client.getnickName());
-        SendMsg(client.getC_fd(), ":localhost 002 " + client.getnickName() + ": Your host is localhost, running version 1.0");
-        SendMsg(client.getC_fd(), ":localhost 003 " + client.getnickName()  + ":This server is Created by Double-MB");
-        // SendMsg();
-        logger.logInfo("New user authenticated, username: " + client.getuserName() + ", fd: "+ toString(client.getC_fd()));
-    }
-    else
-    {
-       SendMsg(client.getC_fd(), ":localhost 464 " + client.getnickName() + " : Unsuccesful Auth");
-       logger.logWarning("New client failed to authenticate, fd: " + toString(client.getC_fd()));
-    }
-}
+// void Server::NumericReplies(Client client, bool flag)
+// {
+//     if (flag)
+//     {
+//         SendMsg(client.getC_fd(), ":localhost 001 " + client.getnickName() + ": Welcome to the Internet Relay Network " + client.getnickName());
+//         SendMsg(client.getC_fd(), ":localhost 002 " + client.getnickName() + ": Your host is localhost, running version 1.0");
+//         SendMsg(client.getC_fd(), ":localhost 003 " + client.getnickName()  + ":This server is Created by Double-MB");
+//         // SendMsg();
+//         logger.logInfo("New user authenticated, username: " + client.getuserName() + ", fd: "+ toString(client.getC_fd()));
+//     }
+//     else
+//     {
+//        SendMsg(client.getC_fd(), ":localhost 464 " + client.getnickName() + " : Unsuccesful Auth");
+//        logger.logWarning("New client failed to authenticate, fd: " + toString(client.getC_fd()));
+//     }
+// }
+
+// std::string Server::getServerPassword( void )
+// {
+//     return (ServerPassword);
+// }

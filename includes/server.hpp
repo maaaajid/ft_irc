@@ -4,6 +4,8 @@
 #include "client.hpp"
 # include "irc.hpp"
 
+#define MAXCLIENT 100
+
 using namespace std;
 class Client;
 
@@ -19,6 +21,9 @@ class Server
         vector<Client>  usersList;
     
     public :
+        std::string    getServerPassword( void ){return (ServerPassword);};
+
+        
         Server(Parse par);
         void    serverSockCreate();
         void    startCommunication();
