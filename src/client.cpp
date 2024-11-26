@@ -33,7 +33,7 @@ bool    Client::getPassValid(void) {return (this->passValid);}
 void    Client::setPassValid(bool valid) { this->passValid = valid;}
 
 
-//0 baqi khassni ntesti some conditions.
+//1
 void        Client::passHandler(std::vector<std::string> &commands, Server &server)
 {
     if (this->passValid)
@@ -48,78 +48,75 @@ void        Client::passHandler(std::vector<std::string> &commands, Server &serv
     }
 
     std::string password = commands[1];
-    // std::cout << "password :  " << password << std::endl;
-    // std::cout << "server password :  " << server.getServerPassword() << std::endl;
     if (password == server.getServerPassword())
     {
-        sendMessage("Password accepted.");
+        logger.logInfo("Password accepted.");   
         setPassValid(true);
     }
     else
     {
-        sendMessage("Password rejected.");
+        logger.logError("Password Rejected.");
         setPassValid(false);
+        return;
     }
     this->passValid = true;
-    this->auth = this->passValid && this->nickValid && this->userValid;
-
-
 }
 
-//0 still need to check if the nick is already taken.
-// aykhassni ndwez instance mn server bach nchecki.
-// aykhassni nzid n7et limit f nicknames.
-void        Client::nickHandler(std::vector<std::string> &commands)
+//1
+void        Client::nickHandler(std::string &command, Server &server)
 {
-    if (this->nickValid)
-    {
-        logger.logError("NICK command already sent.");
-        return;
-    }
-    if (commands.size() < 2)
-    {
-        logger.logError("Invalid NICK command.");
-        return;
-    }
-
-    std::string nick = commands[1];
-    if (!isValidNick(nick))
+    if (!isValidNick(command))
     {
         sendMessage("Invalid nickname.");
         return;
     }
-    setNickname(nick);
+    std::vector<Client> usersList = server.getUsersList();
+    for (std::vector<Client>::iterator it = usersList.begin(); it != usersList.end(); ++it)
+    {
+        if (it->getnickName() == command)
+        {
+            logger.logError("Nickname already taken.");
+            return;
+        }
+    }
+    if (command.size() > MAXNICKLEN)
+    {
+        logger.logError("Nickname too long.");
+        return;
+    }
+    setNickname(command);
     this->nickValid = true;
-    if (!this->auth && (this->passValid && this->nickValid && this->userValid))
-	    std::cout << "Welcome to the IRC server!" << std::endl;
-    this->auth = this->passValid && this->nickValid && this->userValid;
 }
 
-//0 still need to check if the username is already taken.
-// aykhassni ndwez instance mn server bach nchecki.
-// aykhassni nzid n7et limit f usernames.
-void        Client::userHandler(std::vector<std::string> &commands)
+//1
+void        Client::userHandler(std::string &command, Server &server)
 {
-    if (this->userValid)
+    std::vector<Client> usersList = server.getUsersList();
+    for (std::vector<Client>::iterator it = usersList.begin(); it != usersList.end(); ++it)
     {
-        logger.logError("USER command already sent.");
+        if (it->getuserName() == command)
+        {
+            // std::cout << "cmd = " << command << " | username= " <<  it->getuserName() << std::endl;
+            logger.logError("Username already taken.");
+            return;
+        }
+    }
+    if (command.size() > MAXUSERNAMELEN)
+    {
+        logger.logError("Username too long.");
         return;
     }
-    if (commands.size() < 5)
-    {
-        logger.logError("Invalid USER command.");
-        return;
-    }
-
-    std::string username = commands[1];
-    setUsername(username);
+    setUsername(command);
     this->userValid = true;
     if (!this->auth && (this->passValid && this->nickValid && this->userValid))
-        std::cout << "Welcome to the IRC server!" << std::endl;
+        Replies::welcomeRpl(*this, server);
     this->auth = this->passValid && this->nickValid && this->userValid;
 }
 
-// void        Client::quitHandler(std::vector<std::string> &commands);
+// void        Client::quitHandler()
+// {
+
+// }
 
 void Client::sendMessage(const std::string &message)
 {

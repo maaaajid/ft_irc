@@ -22,6 +22,8 @@ class Server
     
     public :
         std::string    getServerPassword( void ){return (ServerPassword);};
+        std::vector<Client> getUsersList( void ){return (usersList);};
+        std::string    getServerIP( void ){return (ServerIP);};
 
         
         Server(Parse par);

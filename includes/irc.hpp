@@ -28,6 +28,7 @@
 # include "./logger.hpp"
 # include "./server.hpp"
 # include "./command.hpp"
+# include "./replies.hpp"
 
 using namespace std;
 

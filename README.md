@@ -49,3 +49,10 @@ case2: kayn problem f sockets server kay lost lconnection mea lclient (solution:
 bro 
 
 **khassni naddi allh replies to the client
+
+ 11-25
+ baqi lia quit method (anclose lconnection  o remove luser men userlist) but lqit haja khera khessha tzad hia tnotify lusers lkhrin ila kan dakhel lchi channel bli quita . earfti kifsh nqder nqadha.
+
+dok numeric rpl rah gha template gha nreglhom.
+ 
+sinon testi dakchi lakhor ig rah mzn. o ela endek chi idea chi haja khassha tzad wela trigel gha sifet lia abro

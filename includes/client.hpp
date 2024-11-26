@@ -5,6 +5,10 @@
 
 #define MAX_READ_ONCE 1024
 
+
+#define MAXNICKLEN 50
+#define MAXUSERNAMELEN 50
+
 // had states a baker khass ywliw conncted, disconnected.
 //client states
 # define WAITING_AUTH 0
@@ -58,8 +62,8 @@ class Client
 
         //cmds handlers for Auth
         void        passHandler(std::vector<std::string> &commands, Server &server);
-        void        nickHandler(std::vector<std::string> &commands);
-        void        userHandler(std::vector<std::string> &commands);
+        void        nickHandler(std::string &command, Server &server);
+        void        userHandler(std::string &command, Server &server);
         // void        quitHandler(std::vector<std::string> &commands);
 
 

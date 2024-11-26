@@ -3,25 +3,21 @@
 //0
 void Command::handleCommand(std::vector<std::string> &commands, Client &client, Server &server)
 {
-    if (!client.getAuth())
+    if (commands.empty())
+        return;
+    std::string cmd = commands[0];
+    for (size_t i = 0; i < commands.size(); i++)
     {
-        for (size_t i = 0; i < commands.size(); i++)
-        {
-            // std::cout << "cmd[i]: " << commands[i] << std::endl;
-            if (!client.getAuth() && commands[i] != "PASS" && commands[i] != "NICK" && commands[i] != "USER")
-                std::cout << "You must authenticate first." << std::endl;
-            if (commands[i] == "PASS")
-                client.passHandler(commands, server);
-            else if (commands[i] == "NICK")
-                client.nickHandler(commands);
-            else if (commands[i] == "USER")
-                client.userHandler(commands);
-            // else if (cmd == "QUIT")
-            //     client.quitHandler(commands);
-        }
+        // std::cout << "commands: " << commands[i] << std::endl;
+        if (commands[i] == "PASS")
+            client.passHandler(commands, server);
+        else if (commands[i] == "NICK")
+            client.nickHandler(commands[i + 1], server);
+        else if (commands[i] == "USER")
+            client.userHandler(commands[i + 1], server);
+        // else if (cmd == "QUIT")
+        //     client.quitHandler(commands);
     }
-    //else aykon fiha les commandes li kayna f server
-
 // //     else if (cmd == "JOIN")
 //     {
 //         std::string channelName;

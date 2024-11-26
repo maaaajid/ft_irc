@@ -74,7 +74,6 @@ void    Server::startCommunication()
 {
     int             epollCounter;
     int             x = 0;
-    // char            buffer[1024];
     epoll_event     events[1024];
     signal(SIGINT, Server::signal_handler);
     signal(SIGQUIT, Server::signal_handler);
@@ -87,14 +86,6 @@ void    Server::startCommunication()
         x = -1;
         while (++x < epollCounter)
         {
-            // std::vector<pollfd> fds;
-            // pollfd pfd;
-            // pfd.fd = socketfd;     // File descriptor to monitor
-            // pfd.events = POLLIN;   // Events to watch for
-            // pfd.revents = 0;       // Placeholder for returned events
-
-            // fds.push_back(pfd);    // Add the structure to the vector
-
             if (events[x].data.fd == this->socketfd)
                 this->createNewConnection();
             if (events[x].events & EPOLLERR || events[x].events & EPOLLHUP || events[x].events & EPOLLRDHUP)
@@ -110,32 +101,15 @@ void    Server::startCommunication()
                     std::string buffer = RecvMsg(it->getC_fd());
                     std::vector<std::string> cmds = Command::getTheCommand(buffer);
                     //printng the commands
-                    std::cout << "buffer: " << buffer << std::endl;
+                    // std::cout << "buffer: " << buffer << std::endl;
                     // for (size_t i= 0; i < cmds.size(); i++)
                     //     std::cout << "cmds: " << cmds[i] << std::endl;
                     Command::handleCommand(cmds, *it, *this);
-                    std::cout << "isAuth" << it->getAuth() << std::endl;
-                    
-                    
+                    std::cout << "is user authed= " << it->getAuth() << std::endl;
+                    std::cout << "Nick rec = " << it->getnickName() << std::endl;
+                    std::cout << "USer rec = " << it->getuserName() << std::endl;    
 
                 }
-
-                    
-            //     if (isNewClient)
-            //     {
-            //         Client newclient =  UserAuth(events[x].data.fd);
-            //         logger.logDebug("auth: " + toString(newclient.getAuth()));
-            //         logger.logDebug("fd: " + toString(cc.getC_fd()));
-            //         logger.logDebug("nick: " + newclient.getnickName());
-            //         logger.logDebug("username: " + newclient.getuserName());
-            //         if (newclient.getAuth())
-            //         {
-            //             NumericReplies(cc, true);
-            //             usersList.push_back(newclient);
-            //         }
-            //         else
-            //             NumericReplies(newclient, false);
-            //     }
             }
         }
     }
@@ -177,53 +151,6 @@ void    Server::signal_handler(int)
     Server::setSignal(true);
 }
 
-//mbouayou:
-
-// Client    Server::UserAuth(int userFd)
-// {
-//     std::string msg = RecvMsg(userFd);
-//     logger.logDebug(msg);
-//     sleep(4);
-//     std::stringstream spliter(msg);
-//     std::string word;
-//     bool checkPass, checkNick, checkUserName;
-//     checkPass = checkNick = checkUserName = false;
-
-//     Client client;
-//     client.setC_fd(userFd);
-//     while (spliter >> word)
-//     {
-//     //     if (!client.auth() && word != "PASS" && )
-//     //     {
-//     //         spliter >> word;
-//     //         logger.logDebug("pass server: " + this->ServerPassword);
-//     //         logger.logDebug("pass client: " + word);
-//     //         if (word == this->ServerPassword)
-//     //         {
-//     //             checkPass = true;
-//     //             client.setPassValid(true);
-//     //         }
-//     //     }
-//     //     if (word == "NICK")
-//     //     {
-//     //         spliter >> word;
-//     //         checkNick = true;
-//     //         client.setNickname(word);
-//     //     }
-//     //     if (word == "USER")
-//     //     {
-//     //         spliter >> word;
-//     //         checkUserName = true;
-//     //         client.setUsername(word);
-//     //     }
-//     }
-//     // if (checkPass && checkNick && checkUserName)
-//     //     client.setAuth(true);
-//     return (client);
-// }
-
-
-
 std::string Server::RecvMsg(int socketFd)
 {
     char buffer[MAX_READ_ONCE];
@@ -257,9 +184,4 @@ std::string Server::RecvMsg(int socketFd)
 //        SendMsg(client.getC_fd(), ":localhost 464 " + client.getnickName() + " : Unsuccesful Auth");
 //        logger.logWarning("New client failed to authenticate, fd: " + toString(client.getC_fd()));
 //     }
-// }
-
-// std::string Server::getServerPassword( void )
-// {
-//     return (ServerPassword);
 // }
