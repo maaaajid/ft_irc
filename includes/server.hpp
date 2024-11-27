@@ -19,10 +19,12 @@ class Server
         int             socketfd;
         int             epollFd;
         vector<Client>  usersList;
+        vector<Channel> channels;
     
     public :
         std::string    getServerPassword( void ){return (ServerPassword);};
         std::vector<Client> getUsersList( void ){return (usersList);};
+        std::vector<Channel> getChannels( void ){return (channels);};
         std::string    getServerIP( void ){return (ServerIP);};
 
         

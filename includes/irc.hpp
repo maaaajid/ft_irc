@@ -23,7 +23,7 @@
 # include <cstdlib>
 # include <fcntl.h>
 # include "./utils.hpp"
-// # include "./channel.hpp"
+# include "./channel.hpp"
 # include "./client.hpp"
 # include "./logger.hpp"
 # include "./server.hpp"

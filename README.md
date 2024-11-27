@@ -56,3 +56,28 @@ bro
 dok numeric rpl rah gha template gha nreglhom.
  
 sinon testi dakchi lakhor ig rah mzn. o ela endek chi idea chi haja khassha tzad wela trigel gha sifet lia abro
+
+test 1 :
+    - dert /connect localhost 5555[port] lmerra lwla
+        is user authed= 0
+        Nick rec = brahim
+        USer rec = 
+        is user authed= 0
+        Nick rec = brahim
+        USer rec = brahim
+    -fach 3awdt dertha b /connect localhost 5555[port] 1234 tsed server
+    
+    -o fach dert connect blpass howa hadak lmra lwla 
+        [15:23:53] [INFO] Message sent to client: 004 brahim :localhost 1.0 ao mt
+        is user authed= 1
+        Nick rec = brahim
+        USer rec = brahim
+        is user authed= 1
+        Nick rec = brahim
+        USer rec = brahim
+        is user authed= 1
+        Nick rec = brahim
+        USer rec = brahim
+    - fach kan3awd ndir connect o howa mconnecti kaytsed server
+
+    
