@@ -31,6 +31,7 @@ class Channel
         void setMode(char mode, void *value);
         bool isOperator(Client *client) const;
         void setOperator(Client *client, bool isOp);
+        bool isClientInChannel(Client *client) const;
         
         void broadcastMessage(const std::string &message, Client *sender);
         std::vector<Client*> getClients() const;

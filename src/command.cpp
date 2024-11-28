@@ -16,8 +16,8 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
 
     vector<Channel>channels = server.getChannels();
     std::string cmd = commands[0];
-    std::istringstream iss; // Initialize the string stream
-    iss.str(cmd); // Set the string stream with the command
+    std::istringstream iss;
+    iss.str(cmd);
 
     for (size_t i = 0; i < commands.size(); i++)
     {
@@ -160,6 +160,7 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
         std::string value;
         iss >> channelName >> mode >> value;
 
+        logger.logDebug(mode);
         if (mode.length() == 1)
         {
             std::vector<Channel>::iterator it = std::find_if(channels.begin(), channels.end(), ChannelNameMatcher(channelName));
@@ -189,6 +190,29 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
         else
             client.sendMessage("Invalid mode format. Must be a single character.");
     }
+    else if (cmd == "QUIT")
+    {
+        std::string quitMessage;
+        std::getline(iss, quitMessage);
+
+        for (std::vector<Channel>::iterator it = channels.begin(); it != channels.end(); ++it)
+        {
+            if (it->isClientInChannel(&client))
+            {
+                std::string leaveMessage = client.getnickName() + " has left the channel: " + quitMessage;
+                it->broadcastMessage(leaveMessage.c_str(), NULL);
+                it->leave(&client);
+            }
+        }
+        server.removeUser(client.getC_fd());
+    }
+    else if (cmd == "PING")
+    {
+        if (!commands[1].empty())
+            client.sendMessage("PONG :" + commands[1]);
+        else
+            client.sendMessage("PONG :");
+    }
     else
         client.sendMessage("Unknown command: " + cmd);
 }
@@ -215,9 +239,7 @@ std::vector<std::string> Command::getTheCommand(std::string &command)
         // Skip adding "CAP" or "LS" to the commands vector
         if (currentWord == "CAP" || currentWord == "LS")
             continue;
-
         cmds.push_back(currentWord);
     }
-
     return cmds;
 }

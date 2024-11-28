@@ -91,3 +91,8 @@ void Channel::setOperator(Client *client, bool isOp)
     else
         operators.erase(std::remove(operators.begin(), operators.end(), client), operators.end());
 }
+
+bool Channel::isClientInChannel(Client *client) const
+{
+    return std::find(clients.begin(), clients.end(), client) != clients.end();
+}

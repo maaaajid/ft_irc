@@ -32,7 +32,7 @@ class Server
         void    serverSockCreate();
         void    startCommunication();
         void    createNewConnection();
-        void    removeUser(int fd, epoll_event *events);
+        void    removeUser(int fd);
         void    closeAllFds( void );
         bool    getSignal( void ){return (Signal);};
         static void    setSignal(bool s){Signal = s;};

@@ -90,7 +90,7 @@ void    Server::startCommunication()
                 this->createNewConnection();
             if (events[x].events & EPOLLERR || events[x].events & EPOLLHUP || events[x].events & EPOLLRDHUP)
             {
-                this->removeUser(events[x].data.fd, events);
+                this->removeUser(events[x].data.fd);
                 continue;
             }
             if (events[x].events & EPOLLIN && events[x].data.fd != socketfd)
@@ -115,7 +115,7 @@ void    Server::startCommunication()
     }
 }
 
-void    Server::removeUser(int fd, epoll_event *events)
+void Server::removeUser (int fd)
 {
     vector<Client>::iterator it = usersList.begin();
     while (it != this->usersList.end())
@@ -124,8 +124,6 @@ void    Server::removeUser(int fd, epoll_event *events)
         {
             usersList.erase(it);
             close(fd);
-            if (epoll_ctl(this->epollFd, EPOLL_CTL_DEL, fd, events) > 0)
-                logger.logError("Error removing socket from epoll: " + string(strerror(errno))), throw runtime_error("Error removing socket from epoll");
             logger.logInfo("Deleted user: '" + it->getuserName() + "' fd: " + toString(it->getC_fd()));
             break;
         }

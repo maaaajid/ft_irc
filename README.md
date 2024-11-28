@@ -80,4 +80,14 @@ test 1 :
         USer rec = brahim
     - fach kan3awd ndir connect o howa mconnecti kaytsed server
 
+27 nov bakr:
+    updatit removeUser f server 7iyedt menha events parameter
+    implementit QUIT command
+    fixit MODE command b ga3 l options li feha
+    server fach yallah kantconnecta leh kaygoliya
+        [22:01:42] [INFO] Message sent to client: Unknown command: PASS
+        [22:01:42] [INFO] Message sent to client: Invalid mode format. Must be a single character.
+        [22:01:45] [INFO] Message sent to client: Unknown command: PING
+28 nov bakr:
+    ba9i lmochkil f MODE
     
