@@ -9,7 +9,7 @@ Server::Server(Parse par)
     this->ServerPort = par.port;
     this->ServerPassword = par.password;
     if ((this->epollFd = epoll_create(1)) < 0)
-        logger.logError("Error creating epoll instance: " + string(strerror(errno))), throw runtime_error("Error creating epoll instance");
+        logger.logError("Error creating epoll instance: " + std::string(strerror(errno))), throw runtime_error("Error creating epoll instance");
     this->serverSockCreate();
     logger.logInfo("Server Started !");
     logger.logInfo("Server Ip: " + this->ServerIP + " , Port: "+ toString(this->ServerPort));
@@ -23,10 +23,10 @@ Server::~Server(){}
 void    Server::serverSockCreate()
 {
     if ((this->socketfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-        logger.logError("Error creating socket: " + string(strerror(errno))), throw runtime_error("Error creating socket");
+        logger.logError("Error creating socket: " + std::string(strerror(errno))), throw runtime_error("Error creating socket");
     int optval = 1;
     if (setsockopt(this->socketfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0)
-        logger.logError("Error setting socket option: " + string(strerror(errno))), throw runtime_error("Error setting socket option");
+        logger.logError("Error setting socket option: " + std::string(strerror(errno))), throw runtime_error("Error setting socket option");
     if (fcntl(this->socketfd, F_SETFL, O_NONBLOCK) < 0)
         perror("fcntl() error"), throw runtime_error("error fcntl()");
     sockaddr_in addr;
@@ -34,16 +34,16 @@ void    Server::serverSockCreate()
     addr.sin_family = AF_INET;
     addr.sin_port = htons(this->ServerPort);
     if (inet_pton(AF_INET, this->ServerIP.c_str(), &addr.sin_addr.s_addr) < 0)
-        logger.logError("Error converting IP address: " + string(strerror(errno))), throw runtime_error("Error converting IP address");
+        logger.logError("Error converting IP address: " + std::string(strerror(errno))), throw runtime_error("Error converting IP address");
     if (bind(this->socketfd, &(sockaddr &)addr, sizeof(addr)) < 0)
-        logger.logError("Error binding socket: " + string(strerror(errno))), throw runtime_error("Error binding socket"); 
+        logger.logError("Error binding socket: " + std::string(strerror(errno))), throw runtime_error("Error binding socket"); 
     if (listen(this->socketfd, SOMAXCONN) < 0)
-        logger.logError("Error listening on socket: " + string(strerror(errno))), throw runtime_error("Error listening on socket");
+        logger.logError("Error listening on socket: " + std::string(strerror(errno))), throw runtime_error("Error listening on socket");
     epoll_event connection;
     connection.events = EPOLLIN;
     connection.data.fd = this->socketfd;
     if (epoll_ctl(this->epollFd, EPOLL_CTL_ADD, this->socketfd, &connection) < 0)
-        logger.logError("Error adding socket to epoll: " + string(strerror(errno))), throw runtime_error("Error adding socket to epoll");
+        logger.logError("Error adding socket to epoll: " + std::string(strerror(errno))), throw runtime_error("Error adding socket to epoll");
 }
 
 void    Server::createNewConnection()
@@ -56,7 +56,7 @@ void    Server::createNewConnection()
     memset(&addr, 0, sizeof(addr));
     socklen = sizeof(addr);
     if ((fd = accept(this->socketfd, &(sockaddr &)addr, &socklen)) < 0)
-        logger.logError("Error accepting new connection: " + string(strerror(errno))), throw runtime_error("Error accepting new connection");
+        logger.logError("Error accepting new connection: " + std::string(strerror(errno))), throw runtime_error("Error accepting new connection");
     if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
         perror("fcntl() error"), throw runtime_error("error fcntl()");
     Client clientData;
@@ -64,7 +64,7 @@ void    Server::createNewConnection()
     newClient.data.fd = fd;
     newClient.events = EPOLLIN | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDHUP;
     if (epoll_ctl(this->epollFd, EPOLL_CTL_ADD, fd, &newClient) < 0)
-        logger.logError("Error adding new connection: " + string(strerror(errno))), throw runtime_error("Error adding new connection");
+        logger.logError("Error adding new connection: " + std::string(strerror(errno))), throw runtime_error("Error adding new connection");
     clientData.setC_fd(fd);
     clientData.setC_ip(inet_ntoa(addr.sin_addr));
     usersList.push_back(clientData);
@@ -77,12 +77,13 @@ void    Server::startCommunication()
     epoll_event     events[1024];
     signal(SIGINT, Server::signal_handler);
     signal(SIGQUIT, Server::signal_handler);
+    Command command;
 
     while (!this->Signal)
     {
         epollCounter = epoll_wait(this->epollFd, events, 1024, -1);
         if (epollCounter < 0)
-                logger.logError("Error waiting for events: " + string(strerror(errno))), throw runtime_error("Error waiting for events");
+                logger.logError("Error waiting for events: " + std::string(strerror(errno))), throw runtime_error("Error waiting for events");
         x = -1;
         while (++x < epollCounter)
         {
@@ -90,46 +91,38 @@ void    Server::startCommunication()
                 this->createNewConnection();
             if (events[x].events & EPOLLERR || events[x].events & EPOLLHUP || events[x].events & EPOLLRDHUP)
             {
-                this->removeUser(events[x].data.fd);
+                this->removeUser(events[x].data.fd, events);
                 continue;
             }
             if (events[x].events & EPOLLIN && events[x].data.fd != socketfd)
             {
-
                 for (std::vector<Client>::iterator it = this->usersList.begin(); it != this->usersList.end(); ++it)
                 {
                     std::string buffer = RecvMsg(it->getC_fd());
                     std::vector<std::string> cmds = Command::getTheCommand(buffer);
-                    //printng the commands
-                    // std::cout << "buffer: " << buffer << std::endl;
-                    // for (size_t i= 0; i < cmds.size(); i++)
-                    //     std::cout << "cmds: " << cmds[i] << std::endl;
-                    Command::handleCommand(cmds, *it, *this);
-                    std::cout << "is user authed= " << it->getAuth() << std::endl;
-                    std::cout << "Nick rec = " << it->getnickName() << std::endl;
-                    std::cout << "USer rec = " << it->getuserName() << std::endl;    
-
+                    command.handleCommand(cmds, *it, *this, events);
                 }
             }
         }
     }
 }
 
-void Server::removeUser (int fd)
+void Server::removeUser(int fd, epoll_event *events)
 {
-    vector<Client>::iterator it = usersList.begin();
-    while (it != this->usersList.end())
+    epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, events);
+    close(fd);
+
+    for (std::vector<Client>::iterator it = usersList.begin(); it != usersList.end(); ++it)
     {
         if (it->getC_fd() == fd)
         {
+            logger.logInfo("User " + it->getuserName() + " has been removed.");
             usersList.erase(it);
-            close(fd);
-            logger.logInfo("Deleted user: '" + it->getuserName() + "' fd: " + toString(it->getC_fd()));
             break;
         }
-        it++;
     }
 }
+
 
 void    Server::closeAllFds()
 {
@@ -144,10 +137,7 @@ void    Server::closeAllFds()
     close(this->epollFd);
 }
 
-void    Server::signal_handler(int)
-{
-    Server::setSignal(true);
-}
+void    Server::signal_handler(int) { Server::setSignal(true); }
 
 std::string Server::RecvMsg(int socketFd)
 {
@@ -158,7 +148,18 @@ std::string Server::RecvMsg(int socketFd)
     //check this logger is Warning or Error.
     if (recvNum == 0)
         logger.logWarning("closed Connection");
-    return string(buffer, recvNum);
+    return std::string(buffer, recvNum);
+}
+
+Channel* Server::getChannelByName(std::string name)
+{
+    for (std::vector<Channel>::iterator it = channels.begin(); it != channels.end(); ++it)
+    {
+        logger.logDebug(it->getName());
+        if (it->getName() == name)
+            return &(*it);
+    }
+    return NULL;
 }
 
 // void Server::SendMsg(int socketFd, std::string msg)

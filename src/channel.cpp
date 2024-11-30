@@ -41,30 +41,31 @@ void Channel::broadcastMessage(const std::string &message, Client *sender)
     }
 }
 
-void Channel::setMode(char mode, void *value)
+void Channel::setMode(std::string mode, std::string value)
 {
-    switch (mode)
+    switch (mode[1])
     {
         case 'i':
-            inviteOnly = *static_cast<bool*>(value);
+            inviteOnly = mode[0] == '+' ? true : false;
             break;
         case 't':
-            topicRestricted = *static_cast<bool*>(value);
+            topicRestricted = mode[0] == '+' ? true : false;
             break;
         case 'k':
-            key = *static_cast<std::string*>(value);
+            mode[0] == '+' ? key = value : key = "";
             break;
         case 'o':
-            {
-                Client* client = *static_cast<Client**>(value);
-                if (isOperator(client))
-                    operators.erase(std::remove(operators.begin(), operators.end(), client), operators.end());
-                else
-                    operators.push_back(client);
-            }
+        {
+            Client* client = findClient(value);
+            if (isOperator(client) && mode[0] == '-')
+                operators.erase(std::remove(operators.begin(), operators.end(), client), operators.end());
+            else if (client && mode[0] == '+')
+                operators.push_back(client);
+            // else send message that the client is not in the channel
+        }
             break;
         case 'l':
-            userLimit = *static_cast<int*>(value);
+            userLimit = atoi(value.c_str());
             if (userLimit < 0)
                 userLimit = -1;
             break;
@@ -72,8 +73,6 @@ void Channel::setMode(char mode, void *value)
             logger.logError("Unknown mode: " + mode);
             break;
     }
-    std::string modeChangeMessage = "Mode changed: " + std::string(1, mode);
-    broadcastMessage(modeChangeMessage, NULL);
 }
 
 std::vector<Client*> Channel::getClients() const { return clients; }
@@ -95,4 +94,12 @@ void Channel::setOperator(Client *client, bool isOp)
 bool Channel::isClientInChannel(Client *client) const
 {
     return std::find(clients.begin(), clients.end(), client) != clients.end();
+}
+
+Client* Channel::findClient(std::string name)
+{
+    for (std::vector<Client*>::iterator it = clients.begin(); it != clients.end(); ++it)
+        if ((*it)->getnickName() == name)
+            return *it;
+    return NULL;
 }

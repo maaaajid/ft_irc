@@ -8,8 +8,9 @@ class Server;
 
 class Command {
 public:
-    static void handleCommand(std::vector<std::string> &commands, Client &client,  Server &server);
+    void handleCommand(std::vector<std::string> &commands, Client &client,  Server &server, epoll_event *events);
     static std::vector<std::string> getTheCommand(std::string &command);
+    void   setModeHandler(std::vector<std::string> &commands, Client &client, Server &server);
 };
 
 #endif

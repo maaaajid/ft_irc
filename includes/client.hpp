@@ -31,20 +31,22 @@ class Client
         bool    passValid;
         bool    nickValid;
         bool    userValid;
+        bool    invisible;
 
     public :
         Client();
         ~Client();
         void        setC_fd(int fd);
-        void        setNickname(string nickName);
-        void        setUsername(string userName);
-        void        setC_ip(string c_Ip);
+        void        setNickname(std::string nickName);
+        void        setUsername(std::string userName);
+        void        setC_ip(std::string c_Ip);
         void        setC_state(int c_State);
         void        setOperator(bool op);
+        void        setInvisible(bool inv);
         int         getC_fd(void) const;
-        string      getnickName(void);
-        string      getuserName(void);
-        string      getC_ip(void);
+        std::string      getnickName(void);
+        std::string      getuserName(void);
+        std::string      getC_ip(void);
         int         getC_state(void);
         bool        getIsOperator();
         void        sendMessage(const std::string &message);

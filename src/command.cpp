@@ -9,14 +9,14 @@ struct ChannelNameMatcher {
     }
 };
 
-void Command::handleCommand(std::vector<std::string> &commands, Client &client, Server &server)
+void Command::handleCommand(std::vector<std::string> &commands, Client &client, Server &server, epoll_event *events)
 {
     if (commands.empty())
         return;
 
     vector<Channel>channels = server.getChannels();
     std::string cmd = commands[0];
-    std::istringstream iss;
+    std::stringstream iss;
     iss.str(cmd);
 
     for (size_t i = 0; i < commands.size(); i++)
@@ -41,8 +41,8 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
         else
         {
             Channel newChannel(channelName);
-            newChannel.join(&client);
             channels.push_back(newChannel);
+            newChannel.join(&client);
         }
     }
     else if (cmd == "PART")
@@ -160,35 +160,7 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
         std::string value;
         iss >> channelName >> mode >> value;
 
-        logger.logDebug(mode);
-        if (mode.length() == 1)
-        {
-            std::vector<Channel>::iterator it = std::find_if(channels.begin(), channels.end(), ChannelNameMatcher(channelName));
-
-            if (it != channels.end())
-            {
-                if (it->isOperator(&client))
-                {
-                    if (mode == "k")
-                        it->setMode(mode[0], static_cast<void*>(&value));
-                    else if (mode == "l")
-                    {
-                        int userLimitValue = atoi(value.c_str());
-                        it->setMode(mode[0], static_cast<void*>(&userLimitValue));
-                    }
-                    else
-                    {
-                        bool boolValue = (value == "true" || value == "1");
-                        it->setMode(mode[0], static_cast<void*>(&boolValue));
-                    }
-                    it->broadcastMessage("Mode changed to: " + mode, &client);
-                }
-                else
-                    client.sendMessage("You are not an operator in this channel.");
-            }
-        }
-        else
-            client.sendMessage("Invalid mode format. Must be a single character.");
+        setModeHandler(commands, client, server);
     }
     else if (cmd == "QUIT")
     {
@@ -204,7 +176,7 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
                 it->leave(&client);
             }
         }
-        server.removeUser(client.getC_fd());
+        server.removeUser(client.getC_fd(), events);
     }
     else if (cmd == "PING")
     {
@@ -221,7 +193,7 @@ std::vector<std::string> Command::getTheCommand(std::string &command)
 {
     std::vector<std::string> cmds;
     std::string currentWord;
-    std::istringstream spliter(command);
+    std::stringstream spliter(command);
 
     if (command.empty())
         return cmds;
@@ -242,4 +214,89 @@ std::vector<std::string> Command::getTheCommand(std::string &command)
         cmds.push_back(currentWord);
     }
     return cmds;
+}
+
+void Command::setModeHandler(std::vector<std::string> &commands, Client &client, Server &server)
+{
+    if (commands.size() < 2)
+    {
+        client.sendMessage("Usage: /mode <channel|nickname> [[+|-]modechars [parameters]]");
+        return;
+    }
+
+    std::string target = commands[1];
+    std::string modeStr;
+    std::string parameters;
+
+    if (commands.size() > 2)
+    {
+        modeStr = commands[2];
+        if (commands.size() > 3)
+            parameters = commands[3];
+    }
+
+    bool isChannel = (target[0] == '#');
+
+    if (isChannel)
+    {
+        Channel *channel = server.getChannelByName(target);
+        if (!channel)
+        {
+            client.sendMessage("Channel " + target + " not found.");
+            return;
+        }
+
+        if (modeStr.length() == 2)
+        {
+            char mode = modeStr[1];
+            if (mode == 'i' || mode == 'k' || mode == 't' || mode == 'o')
+            {
+                bool enable = (modeStr[0] == '+');
+                if (mode == 'i' || mode == 't')
+                    channel->setMode(modeStr, toString(modeStr[0]));
+                else
+                    channel->setMode(modeStr, parameters);
+                std::string modeAction = (enable ? "enabled" : "disabled");
+                channel->broadcastMessage("Mode " + modeStr + " has been " + modeAction + " in " + target, NULL);
+            }
+            else
+                client.sendMessage("Unknown mode: " + mode);
+        }
+        else
+            client.sendMessage("Invalid mode format. Must be [+|-][modechar]");
+    }
+    else
+    {
+        std::vector<Client> clients = server.getUsersList();
+        Client *targetClient = NULL;
+        for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
+            if (it->getnickName() == target)
+                targetClient = &(*it);
+        if (!targetClient) {
+            client.sendMessage("User  " + target + " not found.");
+            return;
+        }
+
+        if (modeStr.length() == 2)
+        {
+            char mode = modeStr[1];
+            if (mode == 'i') {
+                bool enable = (modeStr[0] == '+');
+                if (enable)
+                {
+                    targetClient->setInvisible(true);
+                    client.sendMessage("User  " + target + " has been set invisible.");
+                }
+                else
+                {
+                    targetClient->setInvisible(false);
+                    client.sendMessage("User  " + target + " has been set visible.");
+                }
+            }
+            else
+                client.sendMessage("Unknown mode for user: " + mode);
+        }
+        else
+            client.sendMessage("Invalid mode format. Must be [+|-][modechar]");
+    }
 }

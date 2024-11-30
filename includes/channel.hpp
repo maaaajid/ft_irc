@@ -28,13 +28,14 @@ class Channel
         std::string getTopic() const;
         std::string getName() const;
         void setName(std::string name);
-        void setMode(char mode, void *value);
+        void setMode(std::string mode, std::string value);
         bool isOperator(Client *client) const;
         void setOperator(Client *client, bool isOp);
         bool isClientInChannel(Client *client) const;
         
         void broadcastMessage(const std::string &message, Client *sender);
         std::vector<Client*> getClients() const;
+        Client *findClient(std::string name);
 };
 
 #endif

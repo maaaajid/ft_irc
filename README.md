@@ -90,4 +90,8 @@ test 1 :
         [22:01:45] [INFO] Message sent to client: Unknown command: PING
 28 nov bakr:
     ba9i lmochkil f MODE
+
+30 nov bakr:
+    implementit setmode walakin ba9i mochkil f channels JOIN makat addich new channel
+    
     
