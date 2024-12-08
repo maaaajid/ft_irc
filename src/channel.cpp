@@ -7,7 +7,7 @@ void Channel::join(Client *client)
     if (userLimit != -1 && static_cast<int>(clients.size()) >= userLimit)
         return;
     clients.push_back(client);
-    broadcastMessage(client->getnickName() + " has joined the channel.", NULL);
+    broadcastMessage(client->getnickName() + " has joined the channel " + ch_name + ".", NULL);
 }
 
 void Channel::leave(Client *client)

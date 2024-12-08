@@ -162,6 +162,11 @@ Channel* Server::getChannelByName(std::string name)
     return NULL;
 }
 
+void Server::addChannel(Channel newChannel)
+{
+    channels.push_back(newChannel);
+}
+
 // void Server::SendMsg(int socketFd, std::string msg)
 // {
 //     std::string newMsg = msg + "\r\n";

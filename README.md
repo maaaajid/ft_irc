@@ -93,5 +93,5 @@ test 1 :
 
 30 nov bakr:
     implementit setmode walakin ba9i mochkil f channels JOIN makat addich new channel
-    
+    lmochkil mn stringstream li f handleCommand kay7et NULL fles variables
     

@@ -38,6 +38,7 @@ class Server
         bool                    getSignal( void ){return (Signal);};
         static void             setSignal(bool s){Signal = s;};
         static void             signal_handler(int);
+        void                    addChannel(Channel newChannel);
 
         void                    SendMsg(int socketFd, std::string msg);
         std::string             RecvMsg(int socketFd);

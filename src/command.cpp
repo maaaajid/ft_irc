@@ -1,7 +1,8 @@
 #include "../includes/irc.hpp"
 
 // Function object for matching channel names
-struct ChannelNameMatcher {
+struct ChannelNameMatcher
+{
     std::string channelName;
     ChannelNameMatcher(const std::string &name) : channelName(name) {}
     bool operator()(Channel &channel) {
@@ -14,10 +15,7 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
     if (commands.empty())
         return;
 
-    vector<Channel>channels = server.getChannels();
     std::string cmd = commands[0];
-    std::stringstream iss;
-    iss.str(cmd);
 
     for (size_t i = 0; i < commands.size(); i++)
     {
@@ -31,74 +29,72 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
 
     if (cmd == "JOIN")
     {
-        std::string channelName;
-        iss >> channelName;
+        std::string channelName = commands[1];
 
-        std::vector<Channel>::iterator it = std::find_if(channels.begin(), channels.end(), ChannelNameMatcher(channelName));
+        Channel *channel = server.getChannelByName(channelName);
 
-        if (it != channels.end())
-            it->join(&client);
+        if (channel)
+            channel->join(&client);
         else
         {
+            logger.logInfo("Channel " + channelName + " does not exist. Creating a new one...");
             Channel newChannel(channelName);
-            channels.push_back(newChannel);
             newChannel.join(&client);
+            server.addChannel(newChannel);
         }
     }
     else if (cmd == "PART")
     {
-        std::string channelName;
-        iss >> channelName;
+        Channel *channel = server.getChannelByName(commands[1]);
 
-        std::vector<Channel>::iterator it = std::find_if(channels.begin(), channels.end(), ChannelNameMatcher(channelName));
-
-        if (it != channels.end())
-            it->leave(&client);
+        channel->broadcastMessage("test", NULL);
+        if (channel)
+            channel->leave(&client);
+        else
+            logger.logWarning("Can't quit " + commands[1] + ". Does not exist.");
     }
     else if (cmd == "MSG")
     {
-        std::string channelName;
-        std::string message;
-        iss >> channelName;
-        std::getline(iss, message);
+        std::string channelName = commands[1];
+        std::string message = commands[2];
         
-        std::vector<Channel>::iterator it = std::find_if(channels.begin(), channels.end(), ChannelNameMatcher(channelName));
+        Channel *channel = server.getChannelByName(channelName);
 
-        if (it != channels.end())
-            it->broadcastMessage(client.getnickName() + ": " + message, &client);
+        if (channel)
+            channel->broadcastMessage(client.getnickName() + ": " + message, &client);
+        else
+            logger.logWarning("Can't broadcast message. Channel " + channelName + " does not exist.");
     }
     else if (cmd == "TOPIC")
     {
-        std::string channelName;
-        std::string newTopic;
-        iss >> channelName;
-        std::getline(iss, newTopic);
+        std::string channelName = commands[1];
+        std::string newTopic = commands[2];
 
-        std::vector<Channel>::iterator it = std::find_if(channels.begin(), channels.end(), ChannelNameMatcher(channelName));
-
-        if (it != channels.end())
+        Channel *channel = server.getChannelByName(channelName);
+        if (channel)
         {
-            if (it->isOperator(&client))
+            if (channel->isOperator(&client))
             {
-                it->setTopic(newTopic);
-                it->broadcastMessage("New topic: " + newTopic, &client);
+                channel->setTopic(newTopic);
+                channel->broadcastMessage("New topic: " + newTopic, &client);
             }
             else
                 client.sendMessage("You are not an operator in this channel.");
         }
+        else
+            logger.logWarning("Can't change topic. Channel " + channelName + " does not exist.");
     }
     else if (cmd == "KICK")
     {
-        std::string channelName;
-        std::string targetNick;
-        iss >> channelName >> targetNick;
+        std::string channelName = commands[1];
+        std::string targetNick = commands[2];
 
-        std::vector<Channel>::iterator it = std::find_if(channels.begin(), channels.end(), ChannelNameMatcher(channelName));
+        Channel *channel = server.getChannelByName(channelName);
 
-        if (it != channels.end())
+        if (channel)
         {
             Client *target = NULL;
-            std::vector<Client*> clientList = it->getClients();
+            std::vector<Client*> clientList = channel->getClients();
             
             for (std::vector<Client*>::iterator it = clientList.begin(); it != clientList.end(); ++it)
             {
@@ -110,25 +106,25 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
                 }
             }
             if (target)
-                it->kick(&client, target);
+                channel->kick(&client, target);
             else
                 client.sendMessage("User   " + targetNick + " not found in the channel.");
         }
+        else
+            logger.logWarning("Can't kick " + targetNick + ". Channel " + channelName + " does not exist.");
     }
     else if (cmd == "INVITE")
     {
-        std::string channelName;
-        std::string targetNick;
-        iss >> channelName >> targetNick;
+        std::string channelName = commands[1];
+        std::string targetNick = commands[2];
 
-        std::vector<Channel>::iterator it = std::find_if(channels.begin(), channels.end(), ChannelNameMatcher(channelName));
-
-        if (it != channels.end())
+        Channel *channel = server.getChannelByName(channelName);
+        if (channel)
         {
-            if (it->isOperator(&client))
+            if (channel->isOperator(&client))
             {
                 Client *target = NULL;
-                std::vector<Client*> clientList = it->getClients();
+                std::vector<Client*> clientList = channel->getClients();
                 
                 for (std:: vector<Client*>::iterator it = clientList.begin(); it != clientList.end(); ++it)
                 {
@@ -141,7 +137,7 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
                 }
                 if (target)
                 {
-                    it->invite(target);
+                    channel->invite(target);
                     target->sendMessage("You have been invited to " + channelName);
                 }
                 else
@@ -155,24 +151,23 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
     }
     else if (cmd == "MODE")
     {
-        std::string channelName;
-        std::string mode;
-        std::string value;
-        iss >> channelName >> mode >> value;
+        std::string channelName = commands[1];
+        std::string mode = commands[2];
+        std::string value = commands[3];
 
         setModeHandler(commands, client, server);
     }
     else if (cmd == "QUIT")
     {
-        std::string quitMessage;
-        std::getline(iss, quitMessage);
+        std::string quitMessage = (commands.size() > 1) ? commands[1] : "Client has disconnected";
 
-        for (std::vector<Channel>::iterator it = channels.begin(); it != channels.end(); ++it)
+        std::vector<Channel>::iterator it;
+        for (it = server.getChannels().begin(); it != server.getChannels().end(); ++it)
         {
             if (it->isClientInChannel(&client))
             {
                 std::string leaveMessage = client.getnickName() + " has left the channel: " + quitMessage;
-                it->broadcastMessage(leaveMessage.c_str(), NULL);
+                it->broadcastMessage(leaveMessage, NULL);
                 it->leave(&client);
             }
         }
