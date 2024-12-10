@@ -55,16 +55,39 @@ void    Server::createNewConnection()
 
     memset(&addr, 0, sizeof(addr));
     socklen = sizeof(addr);
-    if ((fd = accept(this->socketfd, &(sockaddr &)addr, &socklen)) < 0)
-        logger.logError("Error accepting new connection: " + std::string(strerror(errno))), throw runtime_error("Error accepting new connection");
+    if ((fd = accept(this->socketfd, (sockaddr *)&addr, &socklen)) < 0)
+    {
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+            return;
+        logger.logError("Error accepting new connection: " + std::string(strerror(errno)));
+        return;
+    }
     if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
-        perror("fcntl() error"), throw runtime_error("error fcntl()");
-    Client clientData;
+    {
+        logger.logError("fcntl() error: " + std::string(strerror(errno)));
+        close(fd);
+        return;
+    }
+    for (std::vector<Client>::iterator it = usersList.begin(); it != usersList.end(); ++it)
+    {
+        if (it->getC_fd() == fd)
+        {
+            logger.logWarning("Client is already connected: " + it->getnickName());
+            close(fd);
+            return;
+        }
+    }
+
     memset(&newClient, 0, sizeof(newClient));
     newClient.data.fd = fd;
     newClient.events = EPOLLIN | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDHUP;
     if (epoll_ctl(this->epollFd, EPOLL_CTL_ADD, fd, &newClient) < 0)
-        logger.logError("Error adding new connection: " + std::string(strerror(errno))), throw runtime_error("Error adding new connection");
+    {
+        logger.logError("Error adding new connection to epoll: " + std::string(strerror(errno)));
+        close(fd);
+        return;
+    }
+    Client clientData;
     clientData.setC_fd(fd);
     clientData.setC_ip(inet_ntoa(addr.sin_addr));
     usersList.push_back(clientData);
@@ -83,7 +106,10 @@ void    Server::startCommunication()
     {
         epollCounter = epoll_wait(this->epollFd, events, 1024, -1);
         if (epollCounter < 0)
-                logger.logError("Error waiting for events: " + std::string(strerror(errno))), throw runtime_error("Error waiting for events");
+        {
+            logger.logError("Error waiting for events: " + std::string(strerror(errno))), throw runtime_error("Error waiting for events");
+            continue;
+        }
         x = -1;
         while (++x < epollCounter)
         {
@@ -101,6 +127,8 @@ void    Server::startCommunication()
                     std::string buffer = RecvMsg(it->getC_fd());
                     std::vector<std::string> cmds = Command::getTheCommand(buffer);
                     command.handleCommand(cmds, *it, *this, events);
+                    if (usersList.empty())
+                        break;
                 }
             }
         }
@@ -109,7 +137,16 @@ void    Server::startCommunication()
 
 void Server::removeUser(int fd, epoll_event *events)
 {
-    epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, events);
+    if (fd < 0)
+    {
+        logger.logWarning("Invalid file descriptor!");
+        return;
+    }
+    if (epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, events) == -1)
+    {
+        logger.logError("Failed to remove client from epoll: " + std::string(strerror(errno)));
+        return;
+    }
     close(fd);
 
     for (std::vector<Client>::iterator it = usersList.begin(); it != usersList.end(); ++it)
@@ -141,11 +178,23 @@ void    Server::signal_handler(int) { Server::setSignal(true); }
 
 std::string Server::RecvMsg(int socketFd)
 {
+    if (socketFd < 0)
+    {
+        logger.logWarning("Invalid socket file descriptor.");
+        return std::string();
+    }
+
     char buffer[MAX_READ_ONCE];
     int recvNum;
 
     recvNum = recv(socketFd, buffer, MAX_READ_ONCE, 0);
-    //check this logger is Warning or Error.
+    if (recvNum == -1)
+    {
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+            return std::string();
+        logger.logError("Error in recv(): " + std::string(strerror(errno)));
+        return std::string();
+    }
     if (recvNum == 0)
         logger.logWarning("closed Connection");
     return std::string(buffer, recvNum);
@@ -154,11 +203,8 @@ std::string Server::RecvMsg(int socketFd)
 Channel* Server::getChannelByName(std::string name)
 {
     for (std::vector<Channel>::iterator it = channels.begin(); it != channels.end(); ++it)
-    {
-        logger.logDebug(it->getName());
         if (it->getName() == name)
             return &(*it);
-    }
     return NULL;
 }
 

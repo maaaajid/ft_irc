@@ -48,6 +48,8 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
         Channel *channel = server.getChannelByName(commands[1]);
 
         channel->broadcastMessage("test", NULL);
+        // for (size_t i = 0; i < commands.size(); i++)
+            // logger.logDebug(commands[i]);
         if (channel)
             channel->leave(&client);
         else
@@ -172,6 +174,7 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
             }
         }
         server.removeUser(client.getC_fd(), events);
+        return ;
     }
     else if (cmd == "PING")
     {
@@ -180,6 +183,8 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
         else
             client.sendMessage("PONG :");
     }
+    else if (cmd == "PASS" || cmd == "NICK")
+        ; 
     else
         client.sendMessage("Unknown command: " + cmd);
 }
@@ -255,7 +260,7 @@ void Command::setModeHandler(std::vector<std::string> &commands, Client &client,
                 channel->broadcastMessage("Mode " + modeStr + " has been " + modeAction + " in " + target, NULL);
             }
             else
-                client.sendMessage("Unknown mode: " + mode);
+                client.sendMessage("Unknown mode: " + std::string(1, mode));
         }
         else
             client.sendMessage("Invalid mode format. Must be [+|-][modechar]");
@@ -289,7 +294,7 @@ void Command::setModeHandler(std::vector<std::string> &commands, Client &client,
                 }
             }
             else
-                client.sendMessage("Unknown mode for user: " + mode);
+                client.sendMessage("Unknown mode for user: " + std::string(1, mode));
         }
         else
             client.sendMessage("Invalid mode format. Must be [+|-][modechar]");
