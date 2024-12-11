@@ -51,6 +51,7 @@ void        Client::passHandler(std::vector<std::string> &commands, Server &serv
     if (password == server.getServerPassword())
     {
         logger.logInfo("Password accepted.");   
+        sendMessage("001 Password accepted.");
         setPassValid(true);
     }
     else
@@ -154,4 +155,34 @@ bool    isValidNick(const std::string& nick)
     if (invalidFirstChars.find(firstChar) != std::string::npos)
         return false;
     return true;
+}
+
+void Client::changeNick(const std::string &newNick, Server &server)
+{
+    if (newNick.empty())
+    {
+        sendMessage("ERROR :Nickname cannot be empty");
+        return;
+    }
+
+    std::vector<Client> clients = server.getUsersList();
+    for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
+    {
+        logger.logDebug(it->getnickName());
+        logger.logDebug(newNick);
+        if (it->getnickName() == newNick)
+        {
+            sendMessage("ERROR :Nickname is already in use");
+            return;
+        }
+    }
+    std::string oldNick = getnickName();
+    setNickname(newNick);
+    
+    std::string message = ":" + oldNick + " NICK :" + newNick;
+    for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
+        if (it->getC_fd() != getC_fd())
+            it->sendMessage(message);
+    
+    sendMessage("NICK changed to " + newNick);
 }

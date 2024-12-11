@@ -33,11 +33,11 @@ std::string Channel::getTopic() const { return topic; }
 
 void Channel::broadcastMessage(const std::string &message, Client *sender)
 {
+    (void)sender;
     for (std::vector<Client*>::iterator it = clients.begin(); it != clients.end(); ++it)
     {
         Client *client = *it;
-        if (client != sender)
-            client->sendMessage(message);
+        client->sendMessage(message);
     }
 }
 

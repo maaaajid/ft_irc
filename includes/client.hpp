@@ -66,6 +66,7 @@ class Client
         void        passHandler(std::vector<std::string> &commands, Server &server);
         void        nickHandler(std::string &command, Server &server);
         void        userHandler(std::string &command, Server &server);
+        void        changeNick(const std::string &newNick, Server &server);
         // void        quitHandler(std::vector<std::string> &commands);
 
 
