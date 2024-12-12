@@ -1,6 +1,12 @@
 #include "../includes/client.hpp"
 
-Client::Client(){}
+Client::Client(){
+    auth = false;
+    passValid = false;
+    nickValid = false;
+    userValid = false;
+    invisible = false;
+}
 
 Client::~Client(){}
 
@@ -34,7 +40,7 @@ void    Client::setPassValid(bool valid) { this->passValid = valid;}
 
 
 //1
-void        Client::passHandler(std::vector<std::string> &commands, Server &server)
+void        Client::passHandler(std::vector<std::string> &commands, Server &server, epoll_event *events)
 {
     if (this->passValid)
     {
@@ -51,21 +57,28 @@ void        Client::passHandler(std::vector<std::string> &commands, Server &serv
     if (password == server.getServerPassword())
     {
         logger.logInfo("Password accepted.");   
-        sendMessage("001 Password accepted.");
+        sendMessage("001 : Password accepted, To continue your Auth , provide your nickname using /nick <nickname>");
         setPassValid(true);
     }
     else
     {
-        logger.logError("Password Rejected.");
+        // logger.logError("Password Rejected.");
         setPassValid(false);
+        sendMessage("421 : Password rejected.");
+        server.removeUser(this->c_fd, events);
+        throw std::runtime_error("anqi");
         return;
     }
-    this->passValid = true;
 }
 
 //1
 void        Client::nickHandler(std::string &command, Server &server)
 {
+    if (!this->passValid)
+    {
+        sendMessage("Please enter the password of the server using: /connect localhost <port> <password>");
+        return ;
+    }
     if (!isValidNick(command))
     {
         sendMessage("Invalid nickname.");
@@ -86,12 +99,23 @@ void        Client::nickHandler(std::string &command, Server &server)
         return;
     }
     setNickname(command);
+    sendMessage("Your nickname is : " + command + " please enter your real name using: /user <username>");
     this->nickValid = true;
 }
 
 //1
 void        Client::userHandler(std::string &command, Server &server)
 {
+    if (!this->passValid && !this->nickValid)
+    {
+        sendMessage("Please enter the password of the server using: /connect localhost <port> <password>");
+        return ;
+    }
+    else if (this->passValid && !this->nickValid)
+    {
+        sendMessage("Please enter the nick using: /nick <nick>");
+        return ;
+    }
     std::vector<Client> usersList = server.getUsersList();
     for (std::vector<Client>::iterator it = usersList.begin(); it != usersList.end(); ++it)
     {
@@ -108,6 +132,7 @@ void        Client::userHandler(std::string &command, Server &server)
         return;
     }
     setUsername(command);
+    sendMessage("Your username is : " + command + " you can now start chatting.");
     this->userValid = true;
     if (!this->auth && (this->passValid && this->nickValid && this->userValid))
         Replies::welcomeRpl(*this, server);

@@ -124,11 +124,20 @@ void    Server::startCommunication()
             {
                 for (std::vector<Client>::iterator it = this->usersList.begin(); it != this->usersList.end(); ++it)
                 {
-                    std::string buffer = RecvMsg(it->getC_fd());
-                    std::vector<std::string> cmds = Command::getTheCommand(buffer);
-                    command.handleCommand(cmds, *it, *this, events);
+                    try {
+                        std::string buffer = RecvMsg(it->getC_fd());
+                        std::cout << "BUFFER TZEB:" << buffer << std::endl;
+                        std::vector<std::string> cmds = Command::getTheCommand(buffer);
+                        command.handleCommand(cmds, *it, *this, events);
+                    }
+                    catch (std::exception & e)
+                    {
+                        break;
+                    }
                     if (usersList.empty())
                         break;
+                    std::cout << "ANNNQI" << std::endl;
+                    std::cout << "INFOS ELA LUSER: " << it->getC_fd() << it->getnickName() << it->getuserName() <<  std::endl;
                 }
             }
         }
@@ -178,10 +187,11 @@ void    Server::signal_handler(int) { Server::setSignal(true); }
 
 std::string Server::RecvMsg(int socketFd)
 {
-    if (socketFd < 0)
+    if (socketFd <= 0)
     {
         logger.logWarning("Invalid socket file descriptor.");
-        return std::string();
+        throw std::runtime_error("ghhhhhhhhhh");
+        // return std::string();
     }
 
     char buffer[MAX_READ_ONCE];

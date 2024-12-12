@@ -1,25 +1,42 @@
 #include "../includes/irc.hpp"
 
+//toupper func 
+
+std::string toupperfunc(std::string str)
+{
+    if (str.empty())
+        return str;
+    for (size_t i = 0; i < str.length(); i++)
+    {
+        str[i] = std::toupper(str[i]);
+    }
+    return str;
+}
+
+
 void Command::handleCommand(std::vector<std::string> &commands, Client &client, Server &server, epoll_event *events)
 {
     try
     {
         if (commands.empty())
-            return;
-
-        std::string cmd = commands[0];
-
-        for (size_t i = 0; i < commands.size(); i++)
         {
-            if (commands[i] == "PASS")
-                client.passHandler(commands, server);
-            else if (commands[i] == "NICK" && i + 1 < commands.size())
-                client.nickHandler(commands[i + 1], server);
-            else if (commands[i] == "USER" && i + 1 < commands.size())
-                client.userHandler(commands[i + 1], server);
+            std::cout << "heeeere" << std::endl;
+            return;
         }
 
-        if (cmd == "JOIN")
+        std::string cmd = toupperfunc(commands[0]);
+        if (!client.getAuth() && cmd != "PASS" && cmd != "NICK" && cmd != "USERHOST" && cmd != "QUIT" && cmd != "PING")
+        {
+            std::cout << "CHNO DKHEEL: " << cmd << std::endl;
+            client.sendMessage("461 : You must authenticate first. Please use the PASS command.");
+        }
+        else if (cmd == "PASS")
+            client.passHandler(commands, server, events);
+        else if (cmd == "NICK")
+            client.nickHandler(commands[1], server);
+        else if (cmd == "USERHOST")
+            client.userHandler(commands[1], server);
+        else if (cmd == "JOIN")
         {
             std::string channelName = commands[1];
 
@@ -211,11 +228,11 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
 std::vector<std::string> Command::getTheCommand(std::string &command)
 {
     std::vector<std::string> cmds;
+    if (command.empty())
+        return cmds;
     std::string currentWord;
     std::stringstream spliter(command);
 
-    if (command.empty())
-        return cmds;
 
     while (spliter >> currentWord)
     {
