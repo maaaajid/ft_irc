@@ -126,7 +126,6 @@ void    Server::startCommunication()
                 {
                     try {
                         std::string buffer = RecvMsg(it->getC_fd());
-                        std::cout << "BUFFER TZEB:" << buffer << std::endl;
                         std::vector<std::string> cmds = Command::getTheCommand(buffer);
                         command.handleCommand(cmds, *it, *this, events);
                     }
@@ -136,8 +135,6 @@ void    Server::startCommunication()
                     }
                     if (usersList.empty())
                         break;
-                    std::cout << "ANNNQI" << std::endl;
-                    std::cout << "INFOS ELA LUSER: " << it->getC_fd() << it->getnickName() << it->getuserName() <<  std::endl;
                 }
             }
         }
@@ -190,8 +187,7 @@ std::string Server::RecvMsg(int socketFd)
     if (socketFd <= 0)
     {
         logger.logWarning("Invalid socket file descriptor.");
-        throw std::runtime_error("ghhhhhhhhhh");
-        // return std::string();
+        throw std::runtime_error("Fd is invalid.");
     }
 
     char buffer[MAX_READ_ONCE];
@@ -222,26 +218,3 @@ void Server::addChannel(Channel newChannel)
 {
     channels.push_back(newChannel);
 }
-
-// void Server::SendMsg(int socketFd, std::string msg)
-// {
-//     std::string newMsg = msg + "\r\n";
-//     send(socketFd, newMsg.c_str(), newMsg.length(), 0);
-// }
-
-// void Server::NumericReplies(Client client, bool flag)
-// {
-//     if (flag)
-//     {
-//         SendMsg(client.getC_fd(), ":localhost 001 " + client.getnickName() + ": Welcome to the Internet Relay Network " + client.getnickName());
-//         SendMsg(client.getC_fd(), ":localhost 002 " + client.getnickName() + ": Your host is localhost, running version 1.0");
-//         SendMsg(client.getC_fd(), ":localhost 003 " + client.getnickName()  + ":This server is Created by Double-MB");
-//         // SendMsg();
-//         logger.logInfo("New user authenticated, username: " + client.getuserName() + ", fd: "+ toString(client.getC_fd()));
-//     }
-//     else
-//     {
-//        SendMsg(client.getC_fd(), ":localhost 464 " + client.getnickName() + " : Unsuccesful Auth");
-//        logger.logWarning("New client failed to authenticate, fd: " + toString(client.getC_fd()));
-//     }
-// }

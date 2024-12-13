@@ -57,12 +57,11 @@ void        Client::passHandler(std::vector<std::string> &commands, Server &serv
     if (password == server.getServerPassword())
     {
         logger.logInfo("Password accepted.");   
-        sendMessage("001 : Password accepted, To continue your Auth , provide your nickname using /nick <nickname>");
+        sendMessage("001 : Password accepted, continue with NICK.");
         setPassValid(true);
     }
     else
     {
-        // logger.logError("Password Rejected.");
         setPassValid(false);
         sendMessage("421 : Password rejected.");
         server.removeUser(this->c_fd, events);
@@ -76,7 +75,7 @@ void        Client::nickHandler(std::string &command, Server &server)
 {
     if (!this->passValid)
     {
-        sendMessage("Please enter the password of the server using: /connect localhost <port> <password>");
+        sendMessage("Password not set!");
         return ;
     }
     if (!isValidNick(command))
@@ -99,7 +98,9 @@ void        Client::nickHandler(std::string &command, Server &server)
         return;
     }
     setNickname(command);
-    sendMessage("Your nickname is : " + command + " please enter your real name using: /user <username>");
+    sendMessage("Your nickname is : " + command);
+    if (this->getuserName().empty())
+        sendMessage("Set your username using /user [YOUR_USERNAME]");
     this->nickValid = true;
 }
 
@@ -113,7 +114,7 @@ void        Client::userHandler(std::string &command, Server &server)
     }
     else if (this->passValid && !this->nickValid)
     {
-        sendMessage("Please enter the nick using: /nick <nick>");
+        sendMessage("Please enter the nick using: /nick [YOUR_NICKNAME]");
         return ;
     }
     std::vector<Client> usersList = server.getUsersList();
@@ -125,6 +126,11 @@ void        Client::userHandler(std::string &command, Server &server)
             logger.logError("Username already taken.");
             return;
         }
+    }
+    if (command.empty())
+    {
+        logger.logError("Username can't be empty");
+        return;
     }
     if (command.size() > MAXUSERNAMELEN)
     {
@@ -165,7 +171,7 @@ void Client::sendMessage(const std::string &message)
         logger.logError(oss.str());
     }
     else
-        logger.logInfo("Message sent to client: " + message);
+        logger.logInfo("Message sent to client: " + nickname + " : " + message);
 }
 
 bool    isValidNick(const std::string& nick)

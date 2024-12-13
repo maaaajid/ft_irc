@@ -19,17 +19,11 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
     try
     {
         if (commands.empty())
-        {
-            std::cout << "heeeere" << std::endl;
             return;
-        }
 
         std::string cmd = toupperfunc(commands[0]);
         if (!client.getAuth() && cmd != "PASS" && cmd != "NICK" && cmd != "USERHOST" && cmd != "QUIT" && cmd != "PING")
-        {
-            std::cout << "CHNO DKHEEL: " << cmd << std::endl;
             client.sendMessage("461 : You must authenticate first. Please use the PASS command.");
-        }
         else if (cmd == "PASS")
             client.passHandler(commands, server, events);
         else if (cmd == "NICK")
@@ -91,6 +85,42 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
                 channel->broadcastMessage(client.getnickName() + ": " + message, &client);
             else
                 logger.logWarning("Can't broadcast message. Channel " + channelName + " does not exist.");
+        }
+        else if (cmd == "PRIVMSG")
+        {
+            if (commands.size() < 3)
+            {
+                client.sendMessage("ERROR :Not enough parameters");
+                return;
+            }
+
+            std::string target = commands[1];
+            std::string message = commands[2];
+            if (target[0] == '#')
+            {
+                Channel *channel = server.getChannelByName(target);
+                if (channel)
+                    channel->broadcastMessage(client.getnickName() + ": " + message, &client);
+                else
+                    client.sendMessage("ERROR :No such channel " + target);
+            }
+            else
+            {
+                Client *targetClient = NULL;
+                std::vector<Client> clients = server.getUsersList();
+                for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
+                {
+                    if (it->getnickName() == target)
+                    {
+                        targetClient = &(*it);
+                        break;
+                    }
+                }
+                if (targetClient)
+                    targetClient->sendMessage(":" + client.getnickName() + "!" + client.getuserName() + "@" + client.getC_ip() + " PRIVMSG " + target + " :" + message);
+                else
+                    client.sendMessage("ERROR :No such nick/channel " + target);
+            }
         }
         else if (cmd == "TOPIC")
         {
@@ -208,12 +238,7 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
             else
                 client.sendMessage("PONG :");
         }
-        else if (cmd == "NICK")
-        {
-            // client.changeNick(commands[1], server);
-            
-        }
-        else if (cmd == "PASS" )
+        else if (cmd == "PASS" || cmd == "WHOIS")
             ;
         else
             client.sendMessage("Unknown command: " + cmd);
@@ -321,12 +346,12 @@ void Command::setModeHandler(std::vector<std::string> &commands, Client &client,
                 if (enable)
                 {
                     targetClient->setInvisible(true);
-                    client.sendMessage("User  " + target + " has been set invisible.");
+                    client.sendMessage("User " + target + " has been set invisible.");
                 }
                 else
                 {
                     targetClient->setInvisible(false);
-                    client.sendMessage("User  " + target + " has been set visible.");
+                    client.sendMessage("User " + target + " has been set visible.");
                 }
             }
             else
