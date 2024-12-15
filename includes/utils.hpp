@@ -10,7 +10,8 @@ struct Parse
     std::string  IPaddr;
 };
 
-Parse    parse(char **av);
-std::string toString(int value);
+Parse           parse(char **av);
+std::string     toString(int value);
+bool            isValidChannelName(const std::string& name);
 
 #endif

@@ -32,47 +32,120 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
             client.userHandler(commands[1], server);
         else if (cmd == "JOIN")
         {
+            if (commands.size() < 2)
+            {
+                // ERR_NEEDMOREPARAMS
+                client.sendMessage("461 " + client.getnickName() + " JOIN :Not enough parameters");
+                return;
+            }
             std::string channelName = commands[1];
-
+            if (!isValidChannelName(channelName))
+            {
+                // ERR_BADCHANMASK
+                client.sendMessage("476 " + client.getnickName() + " " + channelName + " :Invalid channel name");
+                return;
+            }
             Channel *channel = server.getChannelByName(channelName);
 
             if (channel)
+            {
+                if (channel->isInviteOnly() && !channel->isInvited(&client))
+                {
+                    // ERR_INVITEONLYCHAN
+                    client.sendMessage("473 " + client.getnickName() + " " + channelName + " :Cannot join channel (+i)");
+                    return;
+                }
+                if (channel->hasKey())
+                {
+                    if (commands.size() < 3 || commands[2] != channel->getKey())
+                    {
+                        // ERR_BADCHANNELKEY
+                        client.sendMessage("475 " + client.getnickName() + " " + channelName + " :Cannot join channel (+k)");
+                        return;
+                    }
+                }
+                if (channel->isFullyOccupied())
+                {
+                    // ERR_CHANNELISFULL
+                    client.sendMessage("471 " + client.getnickName() + " " + channelName + " :Cannot join channel (+l)");
+                    return;
+                }
                 channel->join(&client);
+                std::string joinMessage = ":" + client.getnickName() + "!" + 
+                                      client.getuserName() + "@" + 
+                                      client.getC_ip() + " JOIN :" + channelName;
+                channel->broadcastMessage(joinMessage, NULL);
+                std::string topic = channel->getTopic();
+                if (!topic.empty())  // RPL_TOPIC
+                    client.sendMessage("332 " + client.getnickName() + " " + channelName + " :" + topic);
+                else // RPL_NOTOPIC
+                    client.sendMessage("331 " + client.getnickName() + " " + channelName + " :No topic is set");
+
+                std::string nameReply = "353 " + client.getnickName() + " = " + channelName + " :";
+                std::vector<Client*> channelClients = channel->getClients();
+
+                for (std::vector<Client*>::iterator it = channelClients.begin(); it != channelClients.end(); ++it)
+                    nameReply += (*it)->getnickName() + " ";
+                client.sendMessage(nameReply);
+
+                client.sendMessage("366 " + client.getnickName() + " " + channelName + " :End of /NAMES list");
+            }
             else
             {
                 logger.logInfo("Channel " + channelName + " does not exist. Creating a new one...");
-                Channel newChannel(channelName);
-                newChannel.join(&client);
+                Channel *newChannel= new Channel(channelName);
+                newChannel->join(&client);
+                newChannel->addOperator(&client);
                 server.addChannel(newChannel);
-                newChannel.broadcastMessage("Channel " + channelName + " created by user " + client.getuserName(), &client);
+
+                std::string createMessage = ":" + client.getnickName() + "!" + 
+                                        client.getuserName() + "@" + 
+                                        client.getC_ip() + " JOIN :" + channelName;
+                newChannel->broadcastMessage(createMessage, NULL);
+                client.sendMessage("331 " + client.getnickName() + " " + channelName + " :No topic is set");
+                client.sendMessage("353 " + client.getnickName() + " = " + channelName + " :" + client.getnickName());
+                client.sendMessage("366 " + client.getnickName() + " " + channelName + " :End of /NAMES list");
             }
         }
         else if (cmd == "PART")
         {
             if (commands.size() < 2)
             {
-                client.sendMessage("ERROR :Not enough parameters");
+                // ERR_NEEDMOREPARAMS
+                client.sendMessage("461 " + client.getnickName() + " PART :Not enough parameters");
                 return;
             }
 
             std::string channelName = commands[1];
+            std::string partMessage = "";
+
+            if (commands.size() > 2)
+                partMessage = commands[2];
+
             Channel *channel = server.getChannelByName(channelName);
 
-            if (channel)
+            if (!channel)
             {
-                if (channel->isClientInChannel(&client))
-                {
-                    std::string partMessage = ":" + client.getnickName() + "!" + 
-                                              client.getuserName() + "@" + 
-                                              client.getC_ip() + " PART :" + channelName;
-                    channel->broadcastMessage(partMessage, NULL);
-                    channel->leave(&client);
-                }
-                else
-                    client.sendMessage("ERROR :You are not in channel " + channelName);
+                // ERR_NOSUCHCHANNEL
+                client.sendMessage("403 " + client.getnickName() + " " + channelName + " :No such channel");
+                return;
             }
-            else
-                client.sendMessage("ERROR :No such channel " + channelName);
+
+            if (!channel->isClientInChannel(&client))
+            {
+                // ERR_NOTONCHANNEL
+                client.sendMessage("442 " + client.getnickName() + " " + channelName + " :You're not on that channel");
+                return;
+            }
+            std::string fullPartMessage = ":" + client.getnickName() + "!" + 
+                                          client.getuserName() + "@" + 
+                                          client.getC_ip() + " PART " + 
+                                          channelName + 
+                                          (partMessage.empty() ? "" : " :" + partMessage);
+            channel->broadcastMessage(fullPartMessage, NULL);
+            channel->leave(&client);
+            if (channel->getClients().empty())
+                server.removeChannel(channelName);
         }
         else if (cmd == "MSG")
         {
@@ -81,6 +154,7 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
 
             Channel *channel = server.getChannelByName(channelName);
 
+            logger.logDebug("Here");
             if (channel)
                 channel->broadcastMessage(client.getnickName() + ": " + message, &client);
             else
@@ -107,12 +181,12 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
             else
             {
                 Client *targetClient = NULL;
-                std::vector<Client> clients = server.getUsersList();
-                for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
+                std::vector<Client*> clients = server.getUsersList();
+                for (std::vector<Client*>::iterator it = clients.begin(); it != clients.end(); ++it)
                 {
-                    if (it->getnickName() == target)
+                    if ((*it)->getnickName() == target)
                     {
-                        targetClient = &(*it);
+                        targetClient = &(*(*it));
                         break;
                     }
                 }
@@ -198,7 +272,7 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
                         target->sendMessage("You have been invited to " + channelName);
                     }
                     else
-                        client.sendMessage("User   " + targetNick + " not found.");
+                        client.sendMessage("User " + targetNick + " not found.");
                 }
                 else
                     client.sendMessage("You are not an operator in this channel.");
@@ -218,15 +292,25 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
         {
             std::string quitMessage = (commands.size() > 1) ? commands[1] : "Client has disconnected";
 
-            std::vector<Channel>::iterator it;
-            for (it = server.getChannels().begin(); it != server.getChannels().end(); ++it)
+            std::vector<Channel*> channels = server.getChannels();
+            for (std::vector<Channel*>::iterator it = channels.begin(); it != channels.end();)
             {
-                if (it->isClientInChannel(&client))
+                if ((*it)->isClientInChannel(&client))
                 {
                     std::string leaveMessage = client.getnickName() + " has left the channel: " + quitMessage;
-                    it->broadcastMessage(leaveMessage, NULL);
-                    it->leave(&client);
+                    (*it)->broadcastMessage(leaveMessage, NULL);
+                    (*it)->leave(&client);
+                    if ((*it)->getClients().empty())
+                    {
+                        std::string channelName = (*it)->getName();
+                        server.removeChannel(channelName);
+                        delete(*it);
+                        it = channels.erase(it);
+                        continue;
+                    }
                 }
+                else
+                    ++it;
             }
             server.removeUser(client.getC_fd(), events);
             return ;
@@ -246,15 +330,15 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
     catch (const std::exception& e)
     {
         logger.logError("Command processing error: " + std::string(e.what()));
-        client.sendMessage("ERROR :Internal server error");
+        // client.sendMessage("ERROR :Internal server error");
     }
 }
 
 std::vector<std::string> Command::getTheCommand(std::string &command)
 {
-    std::vector<std::string> cmds;
     if (command.empty())
-        return cmds;
+        return std::vector<std::string>();
+    std::vector<std::string> cmds;
     std::string currentWord;
     std::stringstream spliter(command);
 
@@ -290,74 +374,135 @@ void Command::setModeHandler(std::vector<std::string> &commands, Client &client,
     std::string parameters;
 
     if (commands.size() > 2)
-    {
         modeStr = commands[2];
-        if (commands.size() > 3)
-            parameters = commands[3];
-    }
+
+    if (commands.size() > 3)
+        parameters = commands[3];
 
     bool isChannel = (target[0] == '#');
 
     if (isChannel)
     {
-        Channel *channel = server.getChannelByName(target);
+        Channel* channel = server.getChannelByName(target);
         if (!channel)
         {
             client.sendMessage("Channel " + target + " not found.");
             return;
         }
 
-        if (modeStr.length() == 2)
+        if (modeStr.empty())
         {
-            char mode = modeStr[1];
-            if (mode == 'i' || mode == 'k' || mode == 't' || mode == 'o')
-            {
-                bool enable = (modeStr[0] == '+');
-                if (mode == 'i' || mode == 't')
-                    channel->setMode(modeStr, toString(modeStr[0]));
-                else
-                    channel->setMode(modeStr, parameters);
-                std::string modeAction = (enable ? "enabled" : "disabled");
-                channel->broadcastMessage("Mode " + modeStr + " has been " + modeAction + " in " + target, NULL);
-            }
-            else
-                client.sendMessage("Unknown mode: " + std::string(1, mode));
+            // RPL_CHANNELMODEIS
+            std::string modeReply = "324 " + client.getnickName() + " " + target + " :Current modes";
+            client.sendMessage(modeReply);
+            return;
         }
-        else
-            client.sendMessage("Invalid mode format. Must be [+|-][modechar]");
-    }
-    else
-    {
-        std::vector<Client> clients = server.getUsersList();
-        Client *targetClient = NULL;
-        for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
-            if (it->getnickName() == target)
-                targetClient = &(*it);
-        if (!targetClient) {
-            client.sendMessage("User  " + target + " not found.");
+        if (modeStr.length() < 2 || 
+            (modeStr[0] != '+' && modeStr[0] != '-'))
+        {
+            client.sendMessage("Invalid mode format. Must be [+|-]modechars");
             return;
         }
 
-        if (modeStr.length() == 2)
+        char operation = modeStr[0];  // + or -
+        char mode = modeStr[1];       // actual mode character
+
+        switch (mode)
         {
-            char mode = modeStr[1];
-            if (mode == 'i') {
-                bool enable = (modeStr[0] == '+');
-                if (enable)
-                {
-                    targetClient->setInvisible(true);
-                    client.sendMessage("User " + target + " has been set invisible.");
-                }
+            case 'i':  // Invite-only mode
+                channel->setMode(modeStr, "");
+                break;
+            case 't':  // Topic restriction mode
+                channel->setMode(modeStr, "");
+                break;
+            case 'k':  // Channel key
+                if (operation == '+' && !parameters.empty())
+                    channel->setMode(modeStr, parameters);
+                else if (operation == '-')
+                    channel->setMode(modeStr, "");
                 else
                 {
-                    targetClient->setInvisible(false);
-                    client.sendMessage("User " + target + " has been set visible.");
+                    client.sendMessage("Key mode requires a parameter when setting");
+                    return;
                 }
-            }
-            else
-                client.sendMessage("Unknown mode for user: " + std::string(1, mode));
+                break;
+            case 'l':  // User limit
+                if (operation == '+')
+                {
+                    int limit = atoi(parameters.c_str());
+                    if (limit > 0)
+                        channel->setMode(modeStr, parameters);
+                    else
+                    {
+                        client.sendMessage("Invalid user limit");
+                        return;
+                    }
+                }
+                else if (operation == '-')
+                    channel->setMode(modeStr, "-1");
+                break;
+            case 'o':  // Operator status
+                if (!parameters.empty())
+                    channel->setMode(modeStr, parameters);
+                else
+                {
+                    client.sendMessage("Operator mode requires a nickname");
+                    return;
+                }
+                break;
+            default:
+                client.sendMessage("Unknown mode: " + std::string(1, mode));
+                return;
         }
-        else
-            client.sendMessage("Invalid mode format. Must be [+|-][modechar]");
+
+        std::string modeChangeMsg = ":" + client.getnickName() + 
+                                    "!" + client.getuserName() + 
+                                    "@" + client.getC_ip() + 
+                                    " MODE " + target + " " + modeStr + 
+                                    (parameters.empty() ? "" : " " + parameters);
+        channel->broadcastMessage(modeChangeMsg, NULL);
+    }
+    else  // User mode
+    {
+        Client* targetClient = NULL;
+        std::vector<Client*> clients = server.getUsersList();
+        for (std::vector<Client*>::iterator it = clients.begin(); it != clients.end(); ++it)
+        {
+            if ((*it)->getnickName() == target)
+            {
+                targetClient = &(*(*it));
+                break;
+            }
+        }
+
+        if (!targetClient)
+        {
+            client.sendMessage("User " + target + " not found.");
+            return;
+        }
+
+        // Validate mode string
+        if (modeStr.length() < 2 || 
+            (modeStr[0] != '+' && modeStr[0] != '-'))
+        {
+            client.sendMessage("Invalid mode format. Must be [+|-]modechars");
+            return;
+        }
+
+        char operation = modeStr[0];  // + or -
+        char mode = modeStr[1];       // actual mode character
+
+        switch (mode)
+        {
+            case 'i':  // Invisible mode
+                if (operation == '+')
+                    targetClient->setInvisible(true);
+                else
+                    targetClient->setInvisible(false);
+                break;
+            default:
+                client.sendMessage("Unknown user mode: " + std::string(1, mode));
+                return;
+        }
     }
 }

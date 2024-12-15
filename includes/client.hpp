@@ -35,6 +35,17 @@ class Client
 
     public :
         Client();
+        Client& operator=(const Client& other) {
+            if (this != &other)
+            {
+                this->c_fd = other.c_fd;
+                this->nickname = other.nickname;
+                this->username = other.username;
+                this->c_ip = other.c_ip;
+            }
+            return *this;
+        }
+
         ~Client();
         void        setC_fd(int fd);
         void        setNickname(std::string nickName);
@@ -69,8 +80,7 @@ class Client
         void        changeNick(const std::string &newNick, Server &server);
         // void        quitHandler(std::vector<std::string> &commands);
 
-
-
+        bool operator==(const Client& other) const { return this->c_fd == other.c_fd; }
 };
 bool isValidNick(const std::string& nick);
 

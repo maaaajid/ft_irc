@@ -28,3 +28,26 @@ std::string toString(int value)
     ss << value;
     return ss.str();
 }
+
+bool isValidChannelName(const std::string& name)
+{
+    if (name.empty() || name[0] != '#')
+        return false;
+
+    if (name.length() > 50)
+        return false;
+
+    for (std::string::size_type i = 0; i < name.length(); ++i)
+    {
+        char c = name[i];
+        if (c < 32 || c > 126)
+            return false;
+        if (c == ' ' || c == ',' || c == '\x07' || c == '\r' || c == '\n')
+            return false;
+    }
+
+    if (name.length() == 1)
+        return false;
+
+    return true;
+}

@@ -1,13 +1,27 @@
 #include "../includes/irc.hpp"
 
-Channel::Channel(const std::string &name) : ch_name(name), inviteOnly(false), topicRestricted(false), userLimit(-1){}
+Channel::Channel(const std::string &name) : ch_name(name), inviteOnly(false), topicRestricted(false), userLimit(-1) {}
 
+Channel& Channel::operator=(const Channel& other)
+{
+            if (this != &other)
+            {
+                for (size_t i = 0; i < clients.size(); ++i)
+                    delete clients[i];
+                clients.clear();
+                this->ch_name = other.ch_name;
+                // Deep copy of clients
+                for (size_t i = 0; i < other.clients.size(); ++i) {
+                    this->clients.push_back(new Client(*other.clients[i])); // Allocate new Client
+                }
+            }
+            return *this;
+}
 void Channel::join(Client *client)
 {
     if (userLimit != -1 && static_cast<int>(clients.size()) >= userLimit)
         return;
     clients.push_back(client);
-    broadcastMessage(client->getnickName() + " has joined the channel " + ch_name + ".", NULL);
 }
 
 void Channel::leave(Client *client)
@@ -33,45 +47,62 @@ std::string Channel::getTopic() const { return topic; }
 
 void Channel::broadcastMessage(const std::string &message, Client *sender)
 {
+    std::vector<Client*> clientsCopy = clients;
+
     (void)sender;
-    for (std::vector<Client*>::iterator it = clients.begin(); it != clients.end(); ++it)
+    for (std::vector<Client*>::iterator it = clientsCopy.begin(); it != clientsCopy.end(); ++it)
     {
-        Client *client = *it;
-        client->sendMessage(message);
+        Client* client = *it;
+
+        if (client == NULL)
+        {
+            logger.logWarning("Null client in broadcast");
+            continue;
+        }
+
+        try {
+            client->sendMessage(message);
+        }
+        catch (const std::exception& e) {
+            logger.logError("Error broadcasting message: " + std::string(e.what()));
+        }
     }
 }
 
 void Channel::setMode(std::string mode, std::string value)
 {
-    switch (mode[1])
+    char operation = mode[0];  // + or -
+    char modeChar = mode[1];   // actual mode character
+
+    switch (modeChar)
     {
-        case 'i':
-            inviteOnly = mode[0] == '+' ? true : false;
+        case 'i':  // Invite-only
+            inviteOnly = (operation == '+');
             break;
-        case 't':
-            topicRestricted = mode[0] == '+' ? true : false;
+        case 't':  // Topic restriction
+            topicRestricted = (operation == '+');
             break;
-        case 'k':
-            mode[0] == '+' ? key = value : key = "";
+        case 'k':  // Channel key
+            if (operation == '+')
+                key = value;
+            else
+                key.clear();
             break;
-        case 'o':
+        case 'l':  // User limit
+            userLimit = (operation == '+') ? atoi(value.c_str()) : -1;
+            break;
+        case 'o':  // Operator status
         {
             Client* client = findClient(value);
-            if (isOperator(client) && mode[0] == '-')
-                operators.erase(std::remove(operators.begin(), operators.end(), client), operators.end());
-            else if (client && mode[0] == '+')
-                operators.push_back(client);
-            // else send message that the client is not in the channel
+            if (client)
+            {
+                if (operation == '+')
+                    addOperator(client);
+                else
+                    removeOperator(client);
+            }
+            break;
         }
-            break;
-        case 'l':
-            userLimit = atoi(value.c_str());
-            if (userLimit < 0)
-                userLimit = -1;
-            break;
-        default:
-            logger.logError("Unknown mode: " + mode);
-            break;
     }
 }
 
@@ -81,19 +112,33 @@ std::string Channel::getName() const { return ch_name; }
 
 void Channel::setName(std::string name) { this->ch_name = name; }
 
-bool Channel::isOperator(Client *client) const { return std::find(operators.begin(), operators.end(), client) != operators.end(); }
+bool Channel::isOperator(Client *client) const
+{
+    if (client == NULL)
+        return false;
+
+    for (std::vector<Client*>::const_iterator it = operators.begin(); it != operators.end(); ++it)
+        if (*it == client)
+            return true;
+    return false;
+}
 
 void Channel::setOperator(Client *client, bool isOp)
 {
     if (isOp)
-        operators.push_back(client);
+        addOperator(client);
     else
         operators.erase(std::remove(operators.begin(), operators.end(), client), operators.end());
 }
 
 bool Channel::isClientInChannel(Client *client) const
 {
-    return std::find(clients.begin(), clients.end(), client) != clients.end();
+    if (client == NULL || clients.empty())
+        return false;
+    for (std::vector<Client*>::const_iterator it = clients.begin(); it != clients.end(); ++it)
+        if (*it == client)
+            return true;
+    return false;
 }
 
 Client* Channel::findClient(std::string name)
@@ -102,4 +147,57 @@ Client* Channel::findClient(std::string name)
         if ((*it)->getnickName() == name)
             return *it;
     return NULL;
+}
+
+bool Channel::isInviteOnly() const { return inviteOnly; }
+
+bool Channel::isInvited(Client* client) const
+{
+    for (std::vector<Client*>::const_iterator it = invitedClients.begin(); it != invitedClients.end(); ++it)
+        if (*it == client)
+            return true;
+    return false;
+}
+
+bool Channel::hasKey() const { return !key.empty(); }
+
+std::string Channel::getKey() const { return key; }
+
+bool Channel::isFullyOccupied() const { return userLimit != -1 && static_cast<int>(clients.size()) >= userLimit; }
+
+void Channel::addOperator(Client* client)
+{
+    if (client == NULL)
+    {
+        logger.logWarning("Attempting to add NULL client as operator");
+        return;
+    }
+
+    if (!isClientInChannel(client))
+    {
+        logger.logWarning("Cannot add operator: Client not in channel");
+        return;
+    }
+
+    if (!isOperator(client))
+    {
+        operators.push_back(client);
+        std::string message = ":" + client->getnickName() + "!" + client->getuserName() + "@" + client->getC_ip() + " " + "MODE " + ch_name + " +o " + client->getnickName();
+        broadcastMessage(message, NULL);
+        std::string numericReply = "381 " + client->getnickName() + " :You are now an operator in " + ch_name;
+        client->sendMessage(numericReply);
+    }
+}
+
+void Channel::removeOperator(Client* client)
+{
+    operators.erase(
+        std::remove(operators.begin(), operators.end(), client), 
+        operators.end()
+    );
+}
+
+Channel::~Channel()
+{
+    logger.logDebug("Destructed channel");
 }

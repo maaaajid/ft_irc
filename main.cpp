@@ -11,7 +11,8 @@ int main(int ac, char **av)
     {
         try
         {
-            Server multiplexing(parse(av));
+            Server *multiplexing = new Server(parse(av));
+            (void)multiplexing;
         }
         catch(const std::exception& e)
         {

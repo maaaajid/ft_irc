@@ -29,7 +29,6 @@
 class Logger
 {
     private :
-        std::string getTime();
 
     public :
         Logger();
@@ -38,6 +37,7 @@ class Logger
         void    logDebug(std::string msg);
         void    logWarning(std::string msg);
         void    logError(std::string msg);
+        std::string getTime();
 };
 
 #endif

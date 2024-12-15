@@ -7,7 +7,9 @@ Server::Server(Parse par)
 {
     this->ServerIP = "127.0.0.1";
     this->ServerPort = par.port;
+    this->ServerName = "Double_MB";
     this->ServerPassword = par.password;
+    usersList.reserve(MAXCLIENT);
     if ((this->epollFd = epoll_create(1)) < 0)
         logger.logError("Error creating epoll instance: " + std::string(strerror(errno))), throw runtime_error("Error creating epoll instance");
     this->serverSockCreate();
@@ -18,7 +20,24 @@ Server::Server(Parse par)
     this->closeAllFds();
 }
 
-Server::~Server(){}
+Server& Server::operator=(const Server& other)
+{
+    if (this != &other)
+    {
+        for (size_t i = 0; i < usersList.size(); ++i)
+            delete usersList[i];
+        usersList.clear();
+        for (size_t i = 0; i < other.usersList.size(); ++i)
+            this->usersList.push_back(new Client(*other.usersList[i]));
+    }
+    return *this;
+}
+
+Server::~Server()
+{
+    for (std::vector<Client *>::iterator client; client != usersList.end(); ++client)
+        delete *client;
+}
 
 void    Server::serverSockCreate()
 {
@@ -68,11 +87,11 @@ void    Server::createNewConnection()
         close(fd);
         return;
     }
-    for (std::vector<Client>::iterator it = usersList.begin(); it != usersList.end(); ++it)
+    for (std::vector<Client*>::iterator it = usersList.begin(); it != usersList.end(); ++it)
     {
-        if (it->getC_fd() == fd)
+        if ((*it)->getC_fd() == fd)
         {
-            logger.logWarning("Client is already connected: " + it->getnickName());
+            logger.logWarning("Client is already connected: " + (*it)->getnickName());
             close(fd);
             return;
         }
@@ -87,9 +106,9 @@ void    Server::createNewConnection()
         close(fd);
         return;
     }
-    Client clientData;
-    clientData.setC_fd(fd);
-    clientData.setC_ip(inet_ntoa(addr.sin_addr));
+    Client *clientData = new Client;
+    clientData->setC_fd(fd);
+    clientData->setC_ip(inet_ntoa(addr.sin_addr));
     usersList.push_back(clientData);
 }
 
@@ -122,19 +141,27 @@ void    Server::startCommunication()
             }
             if (events[x].events & EPOLLIN && events[x].data.fd != socketfd)
             {
-                for (std::vector<Client>::iterator it = this->usersList.begin(); it != this->usersList.end(); ++it)
+                std::vector<Client*> usersCopy = usersList;
+                for (std::vector<Client*>::iterator it = usersCopy.begin(); it != usersCopy.end(); ++it)
                 {
-                    try {
-                        std::string buffer = RecvMsg(it->getC_fd());
-                        std::vector<std::string> cmds = Command::getTheCommand(buffer);
-                        command.handleCommand(cmds, *it, *this, events);
-                    }
-                    catch (std::exception & e)
+                    if ((*it)->getC_fd() == events[x].data.fd)
                     {
-                        break;
+                        try
+                        {
+                            std::string buffer = RecvMsg((*it)->getC_fd());
+                            std::vector<std::string> cmds = Command::getTheCommand(buffer);
+
+                            std::vector<Client*>::iterator originalIt = 
+                                std::find(usersList.begin(), usersList.end(), *it);
+                            if (originalIt != usersList.end())
+                                command.handleCommand(cmds, *(*originalIt), *this, events);
+                        }
+                        catch (std::exception& e)
+                        {
+                            logger.logError("Error processing command: " + std::string(e.what()));
+                            break;
+                        }
                     }
-                    if (usersList.empty())
-                        break;
                 }
             }
         }
@@ -148,32 +175,39 @@ void Server::removeUser(int fd, epoll_event *events)
         logger.logWarning("Invalid file descriptor!");
         return;
     }
-    if (epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, events) == -1)
+    Client* clientToRemove = NULL;
+    for (std::vector<Client*>::iterator it = usersList.begin(); it != usersList.end(); ++it)
     {
-        logger.logError("Failed to remove client from epoll: " + std::string(strerror(errno)));
-        return;
-    }
-    close(fd);
-
-    for (std::vector<Client>::iterator it = usersList.begin(); it != usersList.end(); ++it)
-    {
-        if (it->getC_fd() == fd)
+        if ((*it)->getC_fd() == fd)
         {
-            logger.logInfo("User " + it->getuserName() + " has been removed.");
-            usersList.erase(it);
+            clientToRemove = *it;
             break;
         }
     }
+    if (clientToRemove)
+    {
+        if (epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, events) == -1)
+        {
+            logger.logError("Failed to remove client from epoll: " + std::string(strerror(errno)));
+            return;
+        }
+        close(fd);
+        usersList.erase(std::remove(usersList.begin(), usersList.end(), clientToRemove), usersList.end());
+        logger.logInfo("User  " + clientToRemove->getuserName() + " has been removed.");
+        delete clientToRemove;
+    }
+    else
+        logger.logWarning("Client with fd " + toString(fd) + " not found.");
 }
 
 
 void    Server::closeAllFds()
 {
-    vector<Client>::iterator it = usersList.begin();
+    vector<Client*>::iterator it = usersList.begin();
     while (it != usersList.end())
     {
-        logger.logWarning("closing fd: '" + toString(it->getC_fd()));
-        close(it->getC_fd());
+        logger.logWarning("closing fd: '" + toString((*it)->getC_fd()));
+        close((*it)->getC_fd());
         it++;
     }
     close(this->socketfd);
@@ -208,13 +242,25 @@ std::string Server::RecvMsg(int socketFd)
 
 Channel* Server::getChannelByName(std::string name)
 {
-    for (std::vector<Channel>::iterator it = channels.begin(); it != channels.end(); ++it)
-        if (it->getName() == name)
-            return &(*it);
+    for (std::vector<Channel*>::iterator it = channels.begin(); it != channels.end(); ++it)
+        if ((*it)->getName() == name)
+            return &(*(*it));
     return NULL;
 }
 
-void Server::addChannel(Channel newChannel)
+void Server::addChannel(Channel *newChannel)
 {
     channels.push_back(newChannel);
+}
+
+void Server::removeChannel(const std::string& channelName)
+{
+    for (std::vector<Channel*>::iterator it = channels.begin(); it != channels.end(); ++it)
+    {
+        if ((*it)->getName() == channelName)
+        {
+            channels.erase(it);
+            break;
+        }
+    }
 }

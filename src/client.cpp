@@ -1,11 +1,21 @@
 #include "../includes/client.hpp"
 
 Client::Client(){
-    auth = false;
-    passValid = false;
-    nickValid = false;
-    userValid = false;
-    invisible = false;
+    c_fd        = -1;
+    nickname    = "";
+    username    = "";
+    c_ip        = "";
+    c_state     = 0;
+    auth        = false;
+    passValid   = false;
+    nickValid   = false;
+    userValid   = false;
+    invisible   = false;
+    auth        = false;
+    passValid   = false;
+    nickValid   = false;
+    userValid   = false;
+    invisible   = false;
 }
 
 Client::~Client(){}
@@ -22,7 +32,15 @@ void    Client::setC_state(int c_State) {this->c_state = c_State; }
 
 int     Client::getC_fd(void) const {return(this->c_fd); }
 
-std::string  Client::getnickName(void) {return (this->nickname); }
+std::string  Client::getnickName(void)
+{
+    if (nickname.empty())
+    {
+        logger.logError("Nickname is empty");
+        return "";
+    }
+    return (this->nickname);
+}
 
 std::string  Client::getuserName(void) {return (this->username); }
 
@@ -83,10 +101,10 @@ void        Client::nickHandler(std::string &command, Server &server)
         sendMessage("Invalid nickname.");
         return;
     }
-    std::vector<Client> usersList = server.getUsersList();
-    for (std::vector<Client>::iterator it = usersList.begin(); it != usersList.end(); ++it)
+    std::vector<Client*> usersList = server.getUsersList();
+    for (std::vector<Client*>::iterator it = usersList.begin(); it != usersList.end(); ++it)
     {
-        if (it->getnickName() == command)
+        if ((*it)->getnickName() == command)
         {
             logger.logError("Nickname already taken.");
             return;
@@ -117,10 +135,10 @@ void        Client::userHandler(std::string &command, Server &server)
         sendMessage("Please enter the nick using: /nick [YOUR_NICKNAME]");
         return ;
     }
-    std::vector<Client> usersList = server.getUsersList();
-    for (std::vector<Client>::iterator it = usersList.begin(); it != usersList.end(); ++it)
+    std::vector<Client*> usersList = server.getUsersList();
+    for (std::vector<Client*>::iterator it = usersList.begin(); it != usersList.end(); ++it)
     {
-        if (it->getuserName() == command)
+        if ((*it)->getuserName() == command)
         {
             // std::cout << "cmd = " << command << " | username= " <<  it->getuserName() << std::endl;
             logger.logError("Username already taken.");
@@ -196,12 +214,12 @@ void Client::changeNick(const std::string &newNick, Server &server)
         return;
     }
 
-    std::vector<Client> clients = server.getUsersList();
-    for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
+    std::vector<Client*> clients = server.getUsersList();
+    for (std::vector<Client*>::iterator it = clients.begin(); it != clients.end(); ++it)
     {
-        logger.logDebug(it->getnickName());
+        logger.logDebug((*it)->getnickName());
         logger.logDebug(newNick);
-        if (it->getnickName() == newNick)
+        if ((*it)->getnickName() == newNick)
         {
             sendMessage("ERROR :Nickname is already in use");
             return;
@@ -211,9 +229,9 @@ void Client::changeNick(const std::string &newNick, Server &server)
     setNickname(newNick);
     
     std::string message = ":" + oldNick + " NICK :" + newNick;
-    for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
-        if (it->getC_fd() != getC_fd())
-            it->sendMessage(message);
+    for (std::vector<Client*>::iterator it = clients.begin(); it != clients.end(); ++it)
+        if ((*it)->getC_fd() != getC_fd())
+            (*it)->sendMessage(message);
     
     sendMessage("NICK changed to " + newNick);
 }

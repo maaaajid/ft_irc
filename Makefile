@@ -1,7 +1,9 @@
 NAME = ircserv
 
+SANITIZE_FLAGS = -fsanitize=address -g
+
 CXX = c++
-CPPFLAGS = -Wall -Wextra -Werror -std=c++98 
+CPPFLAGS = -Wall -Wextra -Werror -std=c++98 $(SANITIZE_FLAGS)
 
 SRCS = src/channel.cpp \
 		src/client.cpp \
