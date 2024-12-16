@@ -28,7 +28,7 @@ class Channel
         void join(Client *client);
         void leave(Client *client);
         void kick(Client *client, Client *target);
-        void invite(Client *target);
+        void invite(Client *inviter, Client *target);
         void addOperator(Client* client);
         void removeOperator(Client* client);
         
@@ -42,7 +42,7 @@ class Channel
         void setName(std::string name);
         void setMode(std::string mode, std::string value);
         void setOperator(Client *client, bool isOp);
-        void setTopic(const std::string &newTopic);
+        void setTopic(const std::string &newTopic, Client *setter);
         
         //Utils
         void broadcastMessage(const std::string &message, Client *sender);

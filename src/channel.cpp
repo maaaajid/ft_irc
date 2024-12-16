@@ -27,6 +27,11 @@ void Channel::join(Client *client)
 void Channel::leave(Client *client)
 {
     clients.erase(std::remove(clients.begin(), clients.end(), client), clients.end());
+    if (find(operators.begin(), operators.end(), client) != operators.end())
+        operators.erase(std::remove(operators.begin(), operators.end(), client), operators.end());
+    if (find(invitedClients.begin(), invitedClients.end(), client) != invitedClients.end())
+        invitedClients.erase(std::remove(invitedClients.begin(), invitedClients.end(), client), invitedClients.end());
+
     broadcastMessage(client->getnickName() + " has left the channel.", NULL);
 }
 
@@ -34,14 +39,42 @@ void Channel::kick(Client *client, Client *target)
 {
     if (isOperator(client))
     {
+        std::string kickMessage = ":" + client->getnickName() + "!" + 
+                                  client->getuserName() + "@" + 
+                                  client->getC_ip() + " KICK " + 
+                                  ch_name + " " + target->getnickName();
+        
+        broadcastMessage(kickMessage, NULL);
         leave(target);
-        broadcastMessage(target->getnickName() + " has been kicked from the channel.", client);
     }
 }
 
-void Channel::invite(Client *target) { (void)target; }
+void Channel::invite(Client *inviter, Client *target)
+{
+    std::string inviteReply = "341 " + inviter->getnickName() + " " + 
+                               target->getnickName() + " " + ch_name;
+    inviter->sendMessage(inviteReply);
 
-void Channel::setTopic(const std::string &newTopic) { topic = newTopic; }
+    std::string inviteMessage = ":" + inviter->getnickName() + "!" + 
+                                 inviter->getuserName() + "@" + 
+                                 inviter->getC_ip() + " INVITE " + 
+                                 target->getnickName() + " :" + ch_name;
+    target->sendMessage(inviteMessage);
+    invitedClients.push_back(target);
+}
+
+void Channel::setTopic(const std::string &newTopic, Client *setter) 
+{
+    topic = newTopic;
+    std::string topicMessage = ":" + setter->getnickName() + "!" + 
+                                setter->getuserName() + "@" + 
+                                setter->getC_ip() + " TOPIC " + 
+                                getName() + " :" + newTopic;
+    broadcastMessage(topicMessage, NULL);
+    std::string numericReply = "332 " + setter->getnickName() + " " + 
+                                ch_name + " :" + newTopic;
+    setter->sendMessage(numericReply);
+}
 
 std::string Channel::getTopic() const { return topic; }
 

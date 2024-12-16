@@ -193,7 +193,7 @@ void Server::removeUser(int fd, epoll_event *events)
         }
         close(fd);
         usersList.erase(std::remove(usersList.begin(), usersList.end(), clientToRemove), usersList.end());
-        logger.logInfo("User  " + clientToRemove->getuserName() + " has been removed.");
+        logger.logInfo("User " + clientToRemove->getuserName() + " has been removed.");
         delete clientToRemove;
     }
     else

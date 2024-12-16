@@ -102,9 +102,9 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
                                         client.getuserName() + "@" + 
                                         client.getC_ip() + " JOIN :" + channelName;
                 newChannel->broadcastMessage(createMessage, NULL);
-                client.sendMessage("331 " + client.getnickName() + " " + channelName + " :No topic is set");
                 client.sendMessage("353 " + client.getnickName() + " = " + channelName + " :" + client.getnickName());
                 client.sendMessage("366 " + client.getnickName() + " " + channelName + " :End of /NAMES list");
+                client.sendMessage("331 " + client.getnickName() + " " + channelName + " :No topic is set");
             }
         }
         else if (cmd == "PART")
@@ -174,7 +174,13 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
             {
                 Channel *channel = server.getChannelByName(target);
                 if (channel)
-                    channel->broadcastMessage(client.getnickName() + ": " + message, &client);
+                {
+                    std::string fullMessage = ":" + client.getnickName() + 
+                                   "!" + client.getuserName() + 
+                                   "@" + client.getC_ip() + 
+                                   " PRIVMSG " + channel->getName() + " :" + message;
+                    channel->broadcastMessage(fullMessage, &client);
+                }
                 else
                     client.sendMessage("ERROR :No such channel " + target);
             }
@@ -191,7 +197,13 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
                     }
                 }
                 if (targetClient)
+                {
+                    std::string fullMessage = ":" + client.getnickName() + 
+                               "!" + client.getuserName() + 
+                               "@" + client.getC_ip() + 
+                               " PRIVMSG " + targetClient->getnickName() + " :" + message;
                     targetClient->sendMessage(":" + client.getnickName() + "!" + client.getuserName() + "@" + client.getC_ip() + " PRIVMSG " + target + " :" + message);
+                }
                 else
                     client.sendMessage("ERROR :No such nick/channel " + target);
             }
@@ -205,10 +217,7 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
             if (channel)
             {
                 if (channel->isOperator(&client))
-                {
-                    channel->setTopic(newTopic);
-                    channel->broadcastMessage("New topic: " + newTopic, &client);
-                }
+                    channel->setTopic(newTopic, &client);
                 else
                     client.sendMessage("You are not an operator in this channel.");
             }
@@ -255,7 +264,7 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
                 if (channel->isOperator(&client))
                 {
                     Client *target = NULL;
-                    std::vector<Client*> clientList = channel->getClients();
+                    std::vector<Client*> clientList = server.getUsersList();
 
                     for (std:: vector<Client*>::iterator it = clientList.begin(); it != clientList.end(); ++it)
                     {
@@ -267,10 +276,7 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
                         }
                     }
                     if (target)
-                    {
-                        channel->invite(target);
-                        target->sendMessage("You have been invited to " + channelName);
-                    }
+                        channel->invite(&client, target);
                     else
                         client.sendMessage("User " + targetNick + " not found.");
                 }
@@ -330,7 +336,6 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
     catch (const std::exception& e)
     {
         logger.logError("Command processing error: " + std::string(e.what()));
-        // client.sendMessage("ERROR :Internal server error");
     }
 }
 
