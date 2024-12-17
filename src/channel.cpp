@@ -43,9 +43,9 @@ void Channel::kick(Client *client, Client *target)
                                   client->getuserName() + "@" + 
                                   client->getC_ip() + " KICK " + 
                                   ch_name + " " + target->getnickName();
-        
         broadcastMessage(kickMessage, NULL);
         leave(target);
+        target->sendMessage("ERROR :You have been kicked from " + getName() + " by " + client->getnickName());
     }
 }
 
@@ -94,7 +94,8 @@ void Channel::broadcastMessage(const std::string &message, Client *sender)
         }
 
         try {
-            client->sendMessage(message);
+            if (client != sender)
+                client->sendMessage(message);
         }
         catch (const std::exception& e) {
             logger.logError("Error broadcasting message: " + std::string(e.what()));

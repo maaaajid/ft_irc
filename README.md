@@ -1,0 +1,1 @@
+Some messages should be printed inside the channel either for a specific user or broadcasted to all users.

@@ -147,19 +147,6 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
             if (channel->getClients().empty())
                 server.removeChannel(channelName);
         }
-        else if (cmd == "MSG")
-        {
-            std::string channelName = commands[1];
-            std::string message = commands[2];
-
-            Channel *channel = server.getChannelByName(channelName);
-
-            logger.logDebug("Here");
-            if (channel)
-                channel->broadcastMessage(client.getnickName() + ": " + message, &client);
-            else
-                logger.logWarning("Can't broadcast message. Channel " + channelName + " does not exist.");
-        }
         else if (cmd == "PRIVMSG")
         {
             if (commands.size() < 3)
@@ -199,10 +186,10 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
                 if (targetClient)
                 {
                     std::string fullMessage = ":" + client.getnickName() + 
-                               "!" + client.getuserName() + 
-                               "@" + client.getC_ip() + 
-                               " PRIVMSG " + targetClient->getnickName() + " :" + message;
-                    targetClient->sendMessage(":" + client.getnickName() + "!" + client.getuserName() + "@" + client.getC_ip() + " PRIVMSG " + target + " :" + message);
+                                      "!" + client.getuserName() + 
+                                      "@" + client.getC_ip() + 
+                                      " PRIVMSG " + targetClient->getnickName() + " :" + message;
+                    targetClient->sendMessage(fullMessage);
                 }
                 else
                     client.sendMessage("ERROR :No such nick/channel " + target);
@@ -448,7 +435,12 @@ void Command::setModeHandler(std::vector<std::string> &commands, Client &client,
                 break;
             case 'o':  // Operator status
                 if (!parameters.empty())
-                    channel->setMode(modeStr, parameters);
+                {
+                    if (channel->isOperator(&client))
+                        channel->setMode(modeStr, parameters);
+                    else
+                        ;// client.sendMessage("You are not an operator");
+                }
                 else
                 {
                     client.sendMessage("Operator mode requires a nickname");

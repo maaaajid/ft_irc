@@ -116,14 +116,14 @@ void    Server::startCommunication()
 {
     int             epollCounter;
     int             x = 0;
-    epoll_event     events[1024];
+    epoll_event     events[MAX_READ_ONCE];
     signal(SIGINT, Server::signal_handler);
     signal(SIGQUIT, Server::signal_handler);
     Command command;
 
     while (!this->Signal)
     {
-        epollCounter = epoll_wait(this->epollFd, events, 1024, -1);
+        epollCounter = epoll_wait(this->epollFd, events, MAX_READ_ONCE, -1);
         if (epollCounter < 0)
         {
             logger.logError("Error waiting for events: " + std::string(strerror(errno))), throw runtime_error("Error waiting for events");
@@ -154,7 +154,10 @@ void    Server::startCommunication()
                             std::vector<Client*>::iterator originalIt = 
                                 std::find(usersList.begin(), usersList.end(), *it);
                             if (originalIt != usersList.end())
+                            {   
+                                std::cout << buffer << std::endl;
                                 command.handleCommand(cmds, *(*originalIt), *this, events);
+                            }
                         }
                         catch (std::exception& e)
                         {

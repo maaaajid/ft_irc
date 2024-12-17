@@ -9,8 +9,6 @@
 #define MAXNICKLEN 50
 #define MAXUSERNAMELEN 50
 
-// had states a baker khass ywliw conncted, disconnected.
-//client states
 # define WAITING_AUTH 0
 # define AUTHENTICATED 1
 
