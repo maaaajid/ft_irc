@@ -12,6 +12,7 @@ SRCS = src/channel.cpp \
 		src/replies.cpp \
 		src/server.cpp \
 		src/utils.cpp \
+		src/bot.cpp \
 		main.cpp \
 
 OBJS = $(SRCS:.cpp=.o)

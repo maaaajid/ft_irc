@@ -116,10 +116,12 @@ void    Server::startCommunication()
 {
     int             epollCounter;
     int             x = 0;
+    int             i = 0;
     epoll_event     events[MAX_READ_ONCE];
     signal(SIGINT, Server::signal_handler);
     signal(SIGQUIT, Server::signal_handler);
     Command command;
+    Bot     bot;
 
     while (!this->Signal)
     {
@@ -157,6 +159,8 @@ void    Server::startCommunication()
                             {   
                                 std::cout << buffer << std::endl;
                                 command.handleCommand(cmds, *(*originalIt), *this, events);
+                                if ((i++ % 10) == 0)
+                                    (*originalIt)->sendMessage("[MOTIVATIONAL QUOTE] "+ bot.generateQuote());
                             }
                         }
                         catch (std::exception& e)

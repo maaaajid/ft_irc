@@ -29,6 +29,7 @@
 # include "./server.hpp"
 # include "./command.hpp"
 # include "./replies.hpp"
+# include "./bot.hpp"
 
 using namespace std;
 
