@@ -101,7 +101,7 @@ void        Client::passHandler(std::vector<std::string> &commands, Server &serv
     else
     {
         setPassValid(false);
-        sendMessage("421 : Password rejected.");
+        Replies::NRP_INCORRECTPASS(*this);
         server.removeUser(this->c_fd, events);
         throw std::runtime_error("anqi");
         return;
@@ -126,7 +126,7 @@ void        Client::nickHandler(std::string &command, Server &server)
     {
         if ((*it)->getnickName() == command)
         {
-            logger.logError("Nickname already taken.");
+            Replies::NRP_NICKINUSE(*this);
             return;
         }
     }

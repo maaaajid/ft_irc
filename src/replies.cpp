@@ -23,29 +23,8 @@ void Replies::RPL_CREATED(Client &client, Server &server)
 void Replies::RPL_MYINFO(Client &client, Server &server)
 {
     (void)server;
-    client.sendMessage(":server 004 " + client.getnickName()+ " " + server.getServerName() + ", Avilibale cmd: []");
+    client.sendMessage(":server 004 " + client.getnickName()+ " " + server.getServerName() + ", Avilibale cmds: [PASS, NICK, USER, JOIN, TOPIC, MODE, KICK, INVITE, PRIVMSG, PART, QUIT]");
 }
-
-// void Replies::sendBanner(Client &client, Server &server) 
-// {
-//     (void)server;
-//     std::stringstream banner;
-//     banner << "*************************************************************************\n"
-//            << "*                                                                       *\n"
-//            << "*            WELCOME TO " << "DoubleM-B" << " IRC NETWORK!                     *\n"
-//            << "*                                                                       *\n"
-//            << "*   Hi " << client.getnickName() << ", we're glad to have you here!                *\n"
-//            << "*   Our server is running version " << "version lawala" << ".                     *\n"
-//            << "*   Created on: " << "nehar l7ed mea juj" << ".                                *\n"
-//            << "*                                                                       *\n"
-//            << "*      Remember to follow the rules and have fun chatting!             *\n"
-//            << "*                                                                       *\n"
-//            << "*             Type /help to get started or join a channel!             *\n"
-//            << "*                                                                       *\n"
-//            << "*************************************************************************";
-
-//     client.sendMessage(":" + banner.str());
-// }
 
 void Replies::welcomeRpl(Client &client, Server &server)
 {
@@ -54,4 +33,21 @@ void Replies::welcomeRpl(Client &client, Server &server)
     RPL_CREATED(client, server);
     RPL_MYINFO(client, server);
     
+}
+
+//464 <username> :Password incorrect - Indicates incorrect password.
+void Replies::NRP_INCORRECTPASS(Client &client)
+{
+    client.sendMessage(":server 464 " + client.getnickName()+ " :Password incorrect");
+}
+// 501 <username> :Unknown command - Indicates unknown command.
+void Replies::NRP_UNKOWNCMD(Client &client, std::string cmd)
+{
+    client.sendMessage(":server 501 " + client.getnickName()+ " :Unknown command " + cmd);
+}
+
+//433 <username> <nickname> :Nickname is already in use. - Indicates nickname is already in use.
+void Replies::NRP_NICKINUSE(Client &client)
+{
+    client.sendMessage(":server 433 " + client.getnickName()+ " :Nickname is already in use");
 }

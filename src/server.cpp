@@ -165,8 +165,11 @@ void    Server::startCommunication()
                                     command.handleCommand(cmds, *(*originalIt), *this, events);
                                     if (std::find(usersList.begin(), usersList.end(), *it) != usersList.end())
                                     {
-                                        if ((i++ % 10) == 0)
+                                        if ((*originalIt)->getAuth() && (i % 10) == 0)
+                                        {
                                             (*originalIt)->sendMessage("[MOTIVATIONAL QUOTE] " + bot.generateQuote());
+                                        }
+                                        i++;
                                         (*originalIt)->clearBuffer();
                                     }
                                 }

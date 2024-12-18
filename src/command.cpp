@@ -22,13 +22,13 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
             return;
 
         std::string cmd = toupperfunc(commands[0]);
-        if (!client.getAuth() && cmd != "PASS" && cmd != "NICK" && cmd != "USERHOST" && cmd != "QUIT" && cmd != "PING")
-            client.sendMessage("461 : You must authenticate first. Please use the PASS command.");
+        if (!client.getAuth() && cmd != "PASS" && cmd != "NICK" && cmd != "USERHOST" && cmd != "USER" && cmd != "QUIT" && cmd != "PING" && cmd != "WHO" && cmd != "WHOIS")
+            client.sendMessage("461 : You must complete authentication first.");
         else if (cmd == "PASS")
             client.passHandler(commands, server, events);
         else if (cmd == "NICK")
             client.nickHandler(commands[1], server);
-        else if (cmd == "USERHOST")
+        else if (cmd == "USERHOST" || cmd == "USER")
             client.userHandler(commands[1], server);
         else if (cmd == "JOIN")
         {
@@ -315,10 +315,10 @@ void Command::handleCommand(std::vector<std::string> &commands, Client &client, 
             else
                 client.sendMessage("PONG :");
         }
-        else if (cmd == "PASS" || cmd == "WHOIS")
+        else if (cmd == "WHOIS" || cmd == "WHO")
             ;
         else
-            client.sendMessage("Unknown command: " + cmd);
+            Replies::NRP_UNKOWNCMD(client, cmd);
     }
     catch (const std::exception& e)
     {
