@@ -22,6 +22,7 @@ class Client
         std::string  nickname;
         std::string  username;
         std::string  c_ip;
+        std::string  buffer;
         int     c_state; // client connection state
 
         //for Auth the user
@@ -30,6 +31,7 @@ class Client
         bool    nickValid;
         bool    userValid;
         bool    invisible;
+        bool    cmdComplete;
 
     public :
         Client();
@@ -44,6 +46,7 @@ class Client
             return *this;
         }
 
+        bool operator==(const Client& other) const { return this->c_fd == other.c_fd; }
         ~Client();
         void        setC_fd(int fd);
         void        setNickname(std::string nickName);
@@ -60,7 +63,10 @@ class Client
         bool        getIsOperator();
         void        sendMessage(const std::string &message);
 
-
+        void appendToBuffer(const std::string& data);
+        std::string getBuffer() const;
+        void clearBuffer();
+        bool commandComplete() const;
 
          //for Auth the user
 		bool	    getAuth(void);
@@ -76,9 +82,7 @@ class Client
         void        nickHandler(std::string &command, Server &server);
         void        userHandler(std::string &command, Server &server);
         void        changeNick(const std::string &newNick, Server &server);
-        // void        quitHandler(std::vector<std::string> &commands);
 
-        bool operator==(const Client& other) const { return this->c_fd == other.c_fd; }
 };
 bool isValidNick(const std::string& nick);
 

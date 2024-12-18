@@ -151,16 +151,25 @@ void    Server::startCommunication()
                         try
                         {
                             std::string buffer = RecvMsg((*it)->getC_fd());
-                            std::vector<std::string> cmds = Command::getTheCommand(buffer);
+                            (*it)->appendToBuffer(buffer);
 
-                            std::vector<Client*>::iterator originalIt = 
-                                std::find(usersList.begin(), usersList.end(), *it);
-                            if (originalIt != usersList.end())
-                            {   
-                                std::cout << buffer << std::endl;
-                                command.handleCommand(cmds, *(*originalIt), *this, events);
-                                if ((i++ % 10) == 0)
-                                    (*originalIt)->sendMessage("[MOTIVATIONAL QUOTE] "+ bot.generateQuote());
+                            if ((*it)->commandComplete())
+                            {
+                                std::string completeCommand = (*it)->getBuffer();
+                                std::vector<std::string> cmds = Command::getTheCommand(completeCommand);
+
+                                std::vector<Client*>::iterator originalIt = 
+                                    std::find(usersList.begin(), usersList.end(), *it);
+                                if (originalIt != usersList.end())
+                                {
+                                    command.handleCommand(cmds, *(*originalIt), *this, events);
+                                    if (std::find(usersList.begin(), usersList.end(), *it) != usersList.end())
+                                    {
+                                        if ((i++ % 10) == 0)
+                                            (*originalIt)->sendMessage("[MOTIVATIONAL QUOTE] " + bot.generateQuote());
+                                        (*originalIt)->clearBuffer();
+                                    }
+                                }
                             }
                         }
                         catch (std::exception& e)

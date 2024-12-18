@@ -1,21 +1,22 @@
 #include "../includes/client.hpp"
 
 Client::Client(){
-    c_fd        = -1;
-    nickname    = "";
-    username    = "";
-    c_ip        = "";
-    c_state     = 0;
-    auth        = false;
-    passValid   = false;
-    nickValid   = false;
-    userValid   = false;
-    invisible   = false;
-    auth        = false;
-    passValid   = false;
-    nickValid   = false;
-    userValid   = false;
-    invisible   = false;
+    c_fd            = -1;
+    nickname        = "";
+    username        = "";
+    c_ip            = "";
+    c_state         = 0;
+    auth            = false;
+    passValid       = false;
+    nickValid       = false;
+    userValid       = false;
+    invisible       = false;
+    auth            = false;
+    passValid       = false;
+    nickValid       = false;
+    userValid       = false;
+    invisible       = false;
+    cmdComplete     = false;
 }
 
 Client::~Client(){}
@@ -31,6 +32,25 @@ void    Client::setC_ip(std::string c_Ip) {this->c_ip = c_Ip; }
 void    Client::setC_state(int c_State) {this->c_state = c_State; }
 
 int     Client::getC_fd(void) const {return(this->c_fd); }
+
+void Client::appendToBuffer(const std::string& data)
+{
+    buffer += data;
+    if (buffer.find('\n') != std::string::npos)
+        cmdComplete = true;
+    else
+        cmdComplete = false;
+}
+
+std::string Client::getBuffer() const { return buffer; }
+
+bool Client::commandComplete() const { return cmdComplete; }
+
+void Client::clearBuffer()
+{
+    buffer.clear();
+    cmdComplete = false;
+}
 
 std::string  Client::getnickName(void)
 {
